@@ -172,6 +172,7 @@ class GameSession:
         self.melds = [[], [], [], []]
         self.last_discard = None
         self.last_tsumo = None
+        self.last_result = None  # 직전 화료/유국 결과 (새로고침 후 결과창 복원용)
         self.waiting_for_user = None
 
         # 1. Shuffle full 136-tile wall
@@ -819,6 +820,7 @@ class GameSession:
         if self.bakaze_idx >= 2:
             self.game_over = True
 
+        self.last_result = hora_event
         res = {
             "event": "hora",
             "state": self.get_client_state(),
@@ -868,6 +870,7 @@ class GameSession:
             "new_scores": list(self.scores),
         }
 
+        self.last_result = ryuukyoku_event
         res = {
             "event": "ryuukyoku",
             "state": self.get_client_state(),

@@ -95,6 +95,8 @@ async def websocket_endpoint(websocket: WebSocket):
                 "event": "state_sync",
                 "state": current_session.get_client_state(),
                 "prompt": current_session.waiting_for_user,
+                "result": getattr(current_session, "last_result", None),
+                "game_over": current_session.game_over,
             }
             await websocket.send_text(json.dumps(state_payload))
 

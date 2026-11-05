@@ -122,7 +122,11 @@ export function App() {
           setPrompt(null)
         }
 
-        if (data.event === 'hora') {
+        if (data.event === 'state_sync') {
+          // 새로고침/재접속: 직전 결과가 남아 있으면 결과창을 바로 복원
+          setHoraAnnouncement(null)
+          setRoundResult(data.result || null)
+        } else if (data.event === 'hora') {
           const info = data.result.score_info
           let yakuLevel = info?.yaku_level_name || ''
           if (!yakuLevel && info) {
