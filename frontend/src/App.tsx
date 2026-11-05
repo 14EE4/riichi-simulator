@@ -181,6 +181,28 @@ export function App() {
           </div>
         )}
 
+        {/* Left Side: Mortal 3 (Kamicha - West) anchored on the left without stretching vertical center column */}
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-4 z-10">
+          <div className="flex flex-col items-center justify-center gap-2 shrink-0">
+            <OpponentHand tileCount={getClosedTileCount(3)} vertical={true} />
+            <Melds melds={gameState?.melds?.[3] || []} orientation="left" />
+          </div>
+          <div className="w-[155px] h-[240px] flex items-center justify-center shrink-0">
+            <River discards={gameState?.discards?.[3] || []} className="rotate-90 origin-center" />
+          </div>
+        </div>
+
+        {/* Right Side: Mortal 1 (Shimocha - East) anchored on the right without stretching vertical center column */}
+        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-4 z-10">
+          <div className="w-[155px] h-[240px] flex items-center justify-center shrink-0">
+            <River discards={gameState?.discards?.[1] || []} className="-rotate-90 origin-center" />
+          </div>
+          <div className="flex flex-col items-center justify-center gap-2 shrink-0">
+            <Melds melds={gameState?.melds?.[1] || []} orientation="right" />
+            <OpponentHand tileCount={getClosedTileCount(1)} vertical={true} />
+          </div>
+        </div>
+
         {/* Top: Mortal 2 (Toimen - North) */}
         <div className="flex flex-col items-center gap-1 shrink-0">
           <div className="flex items-center gap-2">
@@ -190,20 +212,8 @@ export function App() {
           <River discards={gameState?.discards?.[2] || []} className="rotate-180 origin-center" />
         </div>
 
-        {/* Middle Row: Left (Kamicha) | CenterPanel | Right (Shimocha) */}
-        <div className="flex w-full items-center justify-between px-4 max-w-7xl shrink-0 my-auto">
-          {/* Left: Mortal 3 (Kamicha - West) */}
-          <div className="flex items-center gap-3">
-            <div className="flex flex-col items-center justify-center gap-2 shrink-0">
-              <OpponentHand tileCount={getClosedTileCount(3)} vertical={true} />
-              <Melds melds={gameState?.melds?.[3] || []} orientation="left" />
-            </div>
-            <div className="w-[125px] h-[195px] flex items-center justify-center shrink-0">
-              <River discards={gameState?.discards?.[3] || []} className="rotate-90 origin-center" />
-            </div>
-          </div>
-
-          {/* Center Info Panel */}
+        {/* Center Info Panel */}
+        <div className="flex items-center justify-center shrink-0 my-auto">
           {gameState && (
             <CenterPanel
               bakaze={gameState.bakaze}
@@ -218,17 +228,6 @@ export function App() {
               riichiDeclared={gameState.riichi_declared}
             />
           )}
-
-          {/* Right: Mortal 1 (Shimocha - East) */}
-          <div className="flex items-center gap-3">
-            <div className="w-[125px] h-[195px] flex items-center justify-center shrink-0">
-              <River discards={gameState?.discards?.[1] || []} className="-rotate-90 origin-center" />
-            </div>
-            <div className="flex flex-col items-center justify-center gap-2 shrink-0">
-              <Melds melds={gameState?.melds?.[1] || []} orientation="right" />
-              <OpponentHand tileCount={getClosedTileCount(1)} vertical={true} />
-            </div>
-          </div>
         </div>
 
         {/* Bottom: Player (You - South) */}

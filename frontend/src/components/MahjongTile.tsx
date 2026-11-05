@@ -14,23 +14,23 @@ interface MahjongTileProps {
 }
 
 // Exact pixel dimensions matching mahgen's natural 70x100 and 92x77 aspect ratios
-// Sized up for clear visibility across all screens
+// Enlarged for clear visibility across all screens
 const TILE_DIMS = {
   xs: {
-    portrait: { w: 22, h: 31 },
-    horizontal: { w: 31, h: 26 },
+    portrait: { w: 28, h: 40 },
+    horizontal: { w: 38, h: 27 },
   },
   sm: {
-    portrait: { w: 30, h: 43 },
-    horizontal: { w: 43, h: 36 },
+    portrait: { w: 36, h: 51 },
+    horizontal: { w: 50, h: 42 },
   },
   md: {
-    portrait: { w: 38, h: 54 },
-    horizontal: { w: 52, h: 44 },
+    portrait: { w: 46, h: 65 },
+    horizontal: { w: 62, h: 52 },
   },
   lg: {
-    portrait: { w: 52, h: 74 },
-    horizontal: { w: 70, h: 58 },
+    portrait: { w: 62, h: 88 },
+    horizontal: { w: 84, h: 70 },
   },
 }
 

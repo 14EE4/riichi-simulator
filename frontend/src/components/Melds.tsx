@@ -21,7 +21,7 @@ export const Melds: React.FC<MeldsProps> = ({
   if (!melds || melds.length === 0) return null
 
   const isPlayer = orientation === 'bottom'
-  const tileSize = isPlayer ? 'sm' : 'xs'
+  const tileSize = isPlayer ? 'md' : 'xs'
   const isVertical = orientation === 'left' || orientation === 'right'
   const rotateClass =
     orientation === 'top'
@@ -41,7 +41,7 @@ export const Melds: React.FC<MeldsProps> = ({
       {melds.map((meld, mIdx) => {
         const isKan = meld.tiles.length >= 4
         const wrapperStyle = isVertical
-          ? { width: '40px', height: isKan ? '115px' : '92px' }
+          ? { width: '48px', height: isKan ? '138px' : '110px' }
           : undefined
 
         return (
