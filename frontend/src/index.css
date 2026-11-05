@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    @apply bg-slate-900 text-slate-100 antialiased select-none overflow-hidden m-0 p-0 h-screen w-screen;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  }
+}
+
+/* Custom tile styling */
+mah-gen {
+  display: inline-block;
+  line-height: 0;
+  vertical-align: middle;
+}
+
+mah-gen svg {
+  display: inline-block;
+  height: 100%;
+  width: auto;
+}

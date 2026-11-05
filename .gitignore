@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+env/
+ENV/
+
+# PyTorch large model weights (100MB+ limit on GitHub)
+backend/models/mortal.pth
+
+# Node & Frontend
+node_modules/
+.vite-temp/
+.DS_Store
+
+# Logs
+*.log
