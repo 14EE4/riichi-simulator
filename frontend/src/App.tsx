@@ -42,7 +42,6 @@ export function App() {
 
   const connectWebSocket = () => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    // Connect to local backend (fallback to port 8000 if vite dev server on 5173)
     const host = window.location.port === '5173' ? '127.0.0.1:8000' : window.location.host
     const wsUrl = `${protocol}//${host}/ws`
 
@@ -77,7 +76,6 @@ export function App() {
 
     ws.onclose = () => {
       setConnected(false)
-      // Auto reconnect after 2 seconds
       setTimeout(connectWebSocket, 2000)
     }
 
@@ -120,21 +118,21 @@ export function App() {
   return (
     <div className="relative flex flex-col h-screen w-screen overflow-hidden bg-radial from-slate-900 via-slate-950 to-black text-slate-100 select-none">
       {/* Top Header */}
-      <header className="flex items-center justify-between px-6 py-2 bg-slate-950/70 border-b border-white/5 backdrop-blur-md z-20">
+      <header className="flex items-center justify-between px-6 py-2 bg-slate-950/80 border-b border-white/10 backdrop-blur-md z-20 shrink-0">
         <div className="flex items-center gap-3">
           <div className="h-3 w-3 rounded-full bg-amber-500 shadow-sm shadow-amber-500/50" />
           <h1 className="text-base font-black tracking-wide bg-clip-text text-transparent bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-500">
             Riichi Mahjong Simulator
           </h1>
-          <span className="text-xs text-slate-400 font-medium px-2 py-0.5 rounded bg-white/5 border border-white/5">
-            vs Mortal AI x3
+          <span className="text-xs text-slate-400 font-semibold px-2 py-0.5 rounded bg-white/5 border border-white/5">
+            Mortal AI x3
           </span>
         </div>
 
         <div className="flex items-center gap-4">
           <button
             onClick={handleNewGame}
-            className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10 active:scale-95 transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10 active:scale-95 transition-all cursor-pointer shadow-sm"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             새 게임
@@ -144,12 +142,12 @@ export function App() {
             {connected ? (
               <>
                 <Wifi className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-emerald-400">연결됨</span>
+                <span className="text-emerald-400 font-semibold">연결됨</span>
               </>
             ) : (
               <>
                 <WifiOff className="w-3.5 h-3.5 text-rose-500" />
-                <span className="text-rose-500">연결 끊김</span>
+                <span className="text-rose-500 font-semibold">연결 끊김</span>
               </>
             )}
           </div>
@@ -157,28 +155,30 @@ export function App() {
       </header>
 
       {/* Main Mahjong Mat (Table) */}
-      <main className="relative flex-1 flex flex-col items-center justify-between p-2 overflow-hidden">
-        {/* Top: Mortal 2 (Toimen - North) [Rotated 180deg facing center] */}
-        <div className="flex flex-col items-center gap-1 rotate-180 origin-center">
+      <main className="relative flex-1 flex flex-col items-center justify-between p-3 overflow-hidden">
+        {/* Top: Mortal 2 (Toimen - North) */}
+        {/* Hand is at the outer edge, river is in front of hand facing table center */}
+        <div className="flex flex-col items-center gap-2">
           <div className="flex items-center gap-3">
             <OpponentHand tileCount={13} />
             <Melds melds={gameState?.melds?.[2] || []} />
           </div>
-          <River discards={gameState?.discards?.[2] || []} />
+          <River discards={gameState?.discards?.[2] || []} className="rotate-180 origin-center" />
         </div>
 
-        {/* Middle Row: Left (Mortal 3 - Kamicha) | CenterPanel | Right (Mortal 1 - Shimocha) */}
-        <div className="flex w-full items-center justify-between px-4 max-w-6xl">
-          {/* Left: Mortal 3 (Kamicha - West) [Rotated 90deg facing center] */}
-          <div className="flex flex-col items-center gap-1 rotate-90 origin-center">
-            <div className="flex items-center gap-3">
-              <OpponentHand tileCount={13} />
+        {/* Middle Row: Left (Kamicha) | CenterPanel | Right (Shimocha) */}
+        <div className="flex w-full items-center justify-between px-6 max-w-7xl">
+          {/* Left: Mortal 3 (Kamicha - West) */}
+          {/* Hand is at outer left edge, river is in front of hand facing center */}
+          <div className="flex items-center gap-3">
+            <OpponentHand tileCount={13} vertical={true} />
+            <div className="flex flex-col items-center gap-2">
               <Melds melds={gameState?.melds?.[3] || []} />
+              <River discards={gameState?.discards?.[3] || []} className="rotate-90 origin-center" />
             </div>
-            <River discards={gameState?.discards?.[3] || []} />
           </div>
 
-          {/* Center Info Panel (Keeps 0deg upright for readability) */}
+          {/* Center Info Panel (Authentic Mahjong Table Display with Per-Seat Rotation) */}
           {gameState && (
             <CenterPanel
               bakaze={gameState.bakaze}
@@ -195,18 +195,20 @@ export function App() {
             />
           )}
 
-          {/* Right: Mortal 1 (Shimocha - East) [Rotated -90deg facing center] */}
-          <div className="flex flex-col items-center gap-1 -rotate-90 origin-center">
-            <div className="flex items-center gap-3">
-              <OpponentHand tileCount={13} />
+          {/* Right: Mortal 1 (Shimocha - East) */}
+          {/* River is on inner side facing center, hand is on outer right edge */}
+          <div className="flex items-center gap-3">
+            <div className="flex flex-col items-center gap-2">
+              <River discards={gameState?.discards?.[1] || []} className="-rotate-90 origin-center" />
               <Melds melds={gameState?.melds?.[1] || []} />
             </div>
-            <River discards={gameState?.discards?.[1] || []} />
+            <OpponentHand tileCount={13} vertical={true} />
           </div>
         </div>
 
-        {/* Bottom: Player (You - South) [0deg normal orientation] */}
-        <div className="flex flex-col items-center gap-1 w-full">
+        {/* Bottom: Player (You - South) */}
+        {/* River is in front facing center, Hand is at outer bottom edge */}
+        <div className="flex flex-col items-center gap-1.5 w-full">
           {/* Action Bar (Chi/Pon/Kan/Riichi/Ron/Tsumo) */}
           <div className="min-h-[44px] flex items-center justify-center">
             <ActionBar
@@ -223,7 +225,7 @@ export function App() {
             <Melds melds={gameState?.melds?.[0] || []} />
           </div>
 
-          {/* My Hand Tiles */}
+          {/* My Hand Tiles (Enlarged 52x74 tiles) */}
           {gameState && (
             <PlayerHand
               hand={gameState.my_hand}

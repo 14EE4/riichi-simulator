@@ -1,7 +1,10 @@
 # 🀄 Riichi Mahjong Simulator (1인용 리치마작 시뮬레이터)
 
-Akagi의 **Mortal AI 신경망 엔진**과 Rust 기반 공식 마작 라이브러리 **libriichi**를 기반으로 제작된 **1인용 일본 리치마작 시뮬레이터**입니다.  
-플레이어 1인(You)과 3명의 Mortal AI(`Mortal East`, `Mortal North`, `Mortal West`)가 풀 룰 일본 리치마작 대국을 진행합니다.
+오픈소스 마작 신경망 **Mortal AI**와 Rust 기반 공식 마작 라이브러리 **libriichi**를 기반으로 제작된 **1인용 일본 리치마작 시뮬레이터**입니다.  
+플레이어 1인(You)과 3명의 Mortal AI(`Mortal East`, `Mortal North`, `Mortal West`)가 정통 일본 리치마작 룰로 대국을 진행합니다.
+
+> [!NOTE]
+> Mortal 모델 가중치(`mortal.pth`)는 저작권 및 용량(100MB+ 제한)으로 인해 저장소에 포함되어 있지 않습니다. 로컬 구동 시 `backend/models/mortal.pth` 경로에 가중치 파일을 배치하여 사용합니다.
 
 ---
 

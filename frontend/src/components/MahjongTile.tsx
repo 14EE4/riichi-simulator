@@ -14,18 +14,19 @@ interface MahjongTileProps {
 }
 
 // Exact pixel dimensions matching mahgen's natural 70x100 and 92x77 aspect ratios
+// Sized up for clear visibility across all screens
 const TILE_DIMS = {
   sm: {
-    portrait: { w: 24, h: 34 },
-    horizontal: { w: 34, h: 28 },
+    portrait: { w: 30, h: 43 },
+    horizontal: { w: 43, h: 36 },
   },
   md: {
-    portrait: { w: 32, h: 46 },
-    horizontal: { w: 44, h: 36 },
+    portrait: { w: 38, h: 54 },
+    horizontal: { w: 52, h: 44 },
   },
   lg: {
-    portrait: { w: 44, h: 62 },
-    horizontal: { w: 58, h: 48 },
+    portrait: { w: 52, h: 74 },
+    horizontal: { w: 70, h: 58 },
   },
 }
 
@@ -77,7 +78,6 @@ export const MahjongTile: React.FC<MahjongTileProps> = ({
       img.style.display = 'block'
       img.style.objectFit = 'contain'
 
-      // Also listen to async load event
       img.onload = () => {
         if (!cancelled) {
           img.style.width = `${dims.w}px`
