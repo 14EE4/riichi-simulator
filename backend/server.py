@@ -95,6 +95,8 @@ async def websocket_endpoint(websocket: WebSocket):
                 "event": "state_sync",
                 "state": current_session.get_client_state(),
                 "prompt": current_session.waiting_for_user,
+                "result": getattr(current_session, "last_result", None),
+                "game_over": current_session.game_over,
             }
             await websocket.send_text(json.dumps(state_payload))
 
@@ -141,6 +143,6 @@ if frontend_dist.is_dir():
 
 if __name__ == "__main__":
     import uvicorn
-    # Automatically open browser on startup
+    logger.info("Starting Riichi Mahjong Simulator on http://localhost:8000")
     webbrowser.open("http://localhost:8000")
-    uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=False)
+    uvicorn.run(app, host="0.0.0.0", port=8000)

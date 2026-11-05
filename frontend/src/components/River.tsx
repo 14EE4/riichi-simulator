@@ -22,7 +22,7 @@ export const River: React.FC<RiverProps> = ({ discards, className = '' }) => {
 
   return (
     <div
-      className={`flex flex-col gap-0.5 p-1 bg-black/40 rounded-xl backdrop-blur-md min-h-[110px] min-w-[185px] border border-white/10 shadow-inner shrink-0 ${className}`}
+      className={`flex flex-col gap-0.5 p-1.5 bg-black/40 rounded-xl backdrop-blur-md min-h-[115px] min-w-[232px] border border-white/10 shadow-inner shrink-0 ${className}`}
     >
       {rows.length === 0 ? (
         <div className="flex h-full items-center justify-center text-xs text-slate-500 italic p-3">
