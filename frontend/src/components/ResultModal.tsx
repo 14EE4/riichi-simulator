@@ -22,15 +22,38 @@ export const ResultModal: React.FC<ResultModalProps> = ({
   const isRyuukyoku = result.type === 'ryuukyoku'
   const doraMarkers: string[] = Array.isArray(result.dora_markers) ? result.dora_markers : []
   const uraMarkers: string[] = Array.isArray(result.ura_markers) ? result.ura_markers : []
+  const winnerMelds: any[] = Array.isArray(result.winner_melds) ? result.winner_melds : []
+
+  const getScoreDisplay = () => {
+    const cost = result.score_info?.cost
+    if (!cost) return '0 점'
+    const isTsumo = result.is_tsumo ?? result.score_info?.is_tsumo
+    const isDealer = result.score_info?.is_dealer
+    const total =
+      cost.total ||
+      (isTsumo
+        ? isDealer
+          ? (cost.main || 0) * 3
+          : (cost.main || 0) + (cost.additional || 0) * 2
+        : cost.main || 0)
+
+    if (isTsumo) {
+      if (isDealer) {
+        return `${total.toLocaleString()} 점 (${(cost.main || 0).toLocaleString()} ALL)`
+      }
+      return `${total.toLocaleString()} 점 (${(cost.additional || 0).toLocaleString()} / ${(cost.main || 0).toLocaleString()})`
+    }
+    return `${total.toLocaleString()} 점`
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="w-[520px] max-w-[92vw] rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-amber-500/50 p-6 shadow-2xl flex flex-col items-center gap-4">
+      <div className="w-[620px] max-w-[95vw] rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-amber-500/50 p-6 shadow-2xl flex flex-col items-center gap-4">
         {/* Title Header */}
         <div className="text-center">
           {isHora && (
             <h2 className="text-2xl font-black tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500">
-              {result.winner_name} 화료 (和了)!
+              {result.winner_name} {result.is_tsumo ? '쯔모 화료 (自摸和了)!' : '론 화료 (栄和)!'}
             </h2>
           )}
           {isRyuukyoku && (
@@ -40,12 +63,48 @@ export const ResultModal: React.FC<ResultModalProps> = ({
           )}
         </div>
 
-        {/* Winner Hand Display */}
+        {/* Winner Hand + Win Tile + Open Melds Display */}
         {isHora && result.winner_hand && (
-          <div className="flex flex-wrap items-center justify-center gap-1 p-3 bg-black/40 rounded-xl border border-white/10">
-            {result.winner_hand.map((tile: string, idx: number) => (
-              <MahjongTile key={idx} tile={tile} size="md" />
-            ))}
+          <div className="flex flex-wrap items-end justify-center gap-3 p-3 bg-black/40 rounded-xl border border-white/10 w-full">
+            {/* Closed Hand */}
+            <div className="flex items-end gap-0.5">
+              {result.winner_hand.map((tile: string, idx: number) => (
+                <MahjongTile key={`wh-${idx}`} tile={tile} size="sm" />
+              ))}
+            </div>
+
+            {/* Winning Tile */}
+            {result.pai && (
+              <div className="flex flex-col items-center gap-0.5 ml-1">
+                <span className="text-[10px] font-black text-amber-400">
+                  {result.is_tsumo ? '쯔모' : '론'}
+                </span>
+                <div className="ring-2 ring-amber-400 rounded-md">
+                  <MahjongTile tile={result.pai} size="sm" />
+                </div>
+              </div>
+            )}
+
+            {/* Open Melds */}
+            {winnerMelds.length > 0 && (
+              <div className="flex items-end gap-2 ml-2">
+                {winnerMelds.map((meld: any, mIdx: number) => (
+                  <div
+                    key={`wm-${mIdx}`}
+                    className="flex items-end gap-0.5 bg-slate-900/80 px-1.5 py-1 rounded border border-white/10"
+                  >
+                    {meld.tiles.map((t: string, tIdx: number) => (
+                      <MahjongTile
+                        key={`wmt-${mIdx}-${tIdx}`}
+                        tile={t}
+                        size="xs"
+                        rotated={tIdx === meld.rot_idx}
+                      />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -103,7 +162,7 @@ export const ResultModal: React.FC<ResultModalProps> = ({
                 {result.score_info.han}판 {result.score_info.fu}부
               </span>
               <span className="text-xl text-amber-300 font-mono">
-                {result.score_info.cost?.main?.toLocaleString()} 점
+                {getScoreDisplay()}
               </span>
             </div>
           </div>

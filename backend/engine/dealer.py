@@ -369,6 +369,9 @@ class GameSession:
             reach_event = {"type": "reach", "actor": actor}
             # Note: if actor is an AI, it already reacted to reach_event in draw_tile
             self.dispatch_public_event(reach_event, skip_agent=actor)
+        else:
+            # Subsequent discard breaks actor's own ippatsu chance
+            self.ippatsu[actor] = False
 
         self.discards[actor].append({
             "tile": tile,
@@ -487,6 +490,7 @@ class GameSession:
         # No Ron occurred: if discarder declared Riichi on this discard, accept Riichi now
         if is_reach and not self.riichi_accepted[discarder]:
             self.riichi_accepted[discarder] = True
+            self.ippatsu[discarder] = True
             if self.scores[discarder] >= 1000:
                 self.scores[discarder] -= 1000
                 self.kyoutaku += 1
@@ -520,6 +524,7 @@ class GameSession:
 
     async def execute_pon(self, actor: int, target_actor: int, tile: str, consumed: List[str]) -> Dict[str, Any]:
         """Execute a Pon call."""
+        self.ippatsu = [False] * 4
         if len(self.discards[target_actor]) > 0:
             self.discards[target_actor].pop()
 
@@ -579,6 +584,7 @@ class GameSession:
 
     async def execute_chi(self, actor: int, target_actor: int, tile: str, consumed: List[str]) -> Dict[str, Any]:
         """Execute a Chi call."""
+        self.ippatsu = [False] * 4
         if len(self.discards[target_actor]) > 0:
             self.discards[target_actor].pop()
 
@@ -627,6 +633,7 @@ class GameSession:
 
     async def execute_kan(self, actor: int, target_actor: int, tile: str, consumed: List[str]) -> Dict[str, Any]:
         """Execute a Daiminkan call."""
+        self.ippatsu = [False] * 4
         if len(self.discards[target_actor]) > 0:
             self.discards[target_actor].pop()
 
@@ -666,12 +673,6 @@ class GameSession:
             self.dispatch_public_event({"type": "dora", "dora_marker": new_dora})
 
         await self.emit_state("call")
-
-        # Draw replacement tile from dead wall (rinshan)
-        if len(self.dead_wall) > 0:
-            rinshan_tile = self.dead_wall.pop(0)
-            self.hands[actor].append(rinshan_tile)
-            return await self.draw_tile(actor)
 
         return await self.draw_tile(actor)
 
@@ -724,6 +725,12 @@ class GameSession:
         win_tile = self.last_tsumo if is_tsumo else self.last_discard["tile"]
         is_dealer = (winner == self.oya)
         is_riichi = self.riichi_declared[winner]
+        round_wind = BAKAZE_LIST[self.bakaze_idx] if self.bakaze_idx < 2 else "E"
+        player_wind = ["E", "S", "W", "N"][(winner - self.oya + 4) % 4]
+        is_ippatsu = bool(self.ippatsu[winner] and is_riichi)
+        is_haitei = bool(is_tsumo and len(self.wall) == 0)
+        is_houtei = bool((not is_tsumo) and len(self.wall) == 0)
+        active_ura = list(self.ura_markers[:len(self.dora_markers)]) if is_riichi else []
 
         score_res = self.scorer.calculate_score(
             hand_tiles=self.hands[winner],
@@ -732,8 +739,13 @@ class GameSession:
             is_riichi=is_riichi,
             is_dealer=is_dealer,
             dora_indicators=self.dora_markers,
-            ura_dora_indicators=self.ura_markers if is_riichi else None,
+            ura_dora_indicators=active_ura if is_riichi else None,
             melds=self.melds[winner],
+            is_ippatsu=is_ippatsu,
+            is_haitei=is_haitei,
+            is_houtei=is_houtei,
+            player_wind=player_wind,
+            round_wind=round_wind,
         )
 
         cost = score_res["cost"]
@@ -767,18 +779,30 @@ class GameSession:
         for s in range(4):
             self.scores[s] += total_delta[s]
 
+        # Build sorted closed hand (without win_tile) so win_tile is shown distinctly at the end
+        closed_without_win = list(self.hands[winner])
+        expected_closed = 13 - 3 * len(self.melds[winner])
+        if len(closed_without_win) > expected_closed:
+            for idx in range(len(closed_without_win) - 1, -1, -1):
+                if closed_without_win[idx] == win_tile:
+                    closed_without_win.pop(idx)
+                    break
+        closed_sorted = sort_tiles(closed_without_win)
+
         hora_event = {
             "type": "hora",
             "actor": winner,
             "target": target_actor,
             "pai": win_tile,
+            "is_tsumo": is_tsumo,
             "is_riichi": is_riichi,
             "dora_markers": list(self.dora_markers),
-            "ura_markers": list(self.ura_markers[:len(self.dora_markers)]) if is_riichi else [],
+            "ura_markers": active_ura,
             "score_info": score_res,
             "score_delta": total_delta,
             "new_scores": list(self.scores),
-            "winner_hand": list(self.hands[winner]),
+            "winner_hand": closed_sorted,
+            "winner_melds": list(self.melds[winner]),
             "winner_name": self.names[winner],
         }
 
