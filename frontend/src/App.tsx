@@ -117,24 +117,24 @@ export function App() {
 
   return (
     <div className="relative flex flex-col h-screen w-screen overflow-hidden bg-radial from-slate-900 via-slate-950 to-black text-slate-100 select-none">
-      {/* Top Header */}
-      <header className="flex items-center justify-between px-6 py-2 bg-slate-950/80 border-b border-white/10 backdrop-blur-md z-20 shrink-0">
+      {/* Top Header (Compact) */}
+      <header className="flex items-center justify-between px-4 py-1.5 bg-slate-950/80 border-b border-white/10 backdrop-blur-md z-30 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="h-3 w-3 rounded-full bg-amber-500 shadow-sm shadow-amber-500/50" />
-          <h1 className="text-base font-black tracking-wide bg-clip-text text-transparent bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-500">
+          <div className="h-2.5 w-2.5 rounded-full bg-amber-500 shadow-sm shadow-amber-500/50" />
+          <h1 className="text-sm font-black tracking-wide bg-clip-text text-transparent bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-500">
             Riichi Mahjong Simulator
           </h1>
-          <span className="text-xs text-slate-400 font-semibold px-2 py-0.5 rounded bg-white/5 border border-white/5">
+          <span className="text-[11px] text-slate-400 font-semibold px-1.5 py-0.5 rounded bg-white/5 border border-white/5">
             Mortal AI x3
           </span>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <button
             onClick={handleNewGame}
-            className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10 active:scale-95 transition-all cursor-pointer shadow-sm"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10 active:scale-95 transition-all cursor-pointer shadow-sm"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
+            <RotateCcw className="w-3 h-3" />
             새 게임
           </button>
 
@@ -142,12 +142,12 @@ export function App() {
             {connected ? (
               <>
                 <Wifi className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-emerald-400 font-semibold">연결됨</span>
+                <span className="text-emerald-400 font-semibold text-xs">연결됨</span>
               </>
             ) : (
               <>
                 <WifiOff className="w-3.5 h-3.5 text-rose-500" />
-                <span className="text-rose-500 font-semibold">연결 끊김</span>
+                <span className="text-rose-500 font-semibold text-xs">연결 끊김</span>
               </>
             )}
           </div>
@@ -155,11 +155,11 @@ export function App() {
       </header>
 
       {/* Main Mahjong Mat (Table) */}
-      <main className="relative flex-1 flex flex-col items-center justify-between p-3 overflow-hidden">
+      <main className="relative flex-1 flex flex-col items-center justify-between px-2 py-1 overflow-hidden">
         {/* Top: Mortal 2 (Toimen - North) */}
-        {/* Hand is at the outer edge, river is in front of hand facing table center */}
-        <div className="flex flex-col items-center gap-2">
-          <div className="flex items-center gap-3">
+        {/* Hand is at outer edge, river is in front of hand facing center */}
+        <div className="flex flex-col items-center gap-1 shrink-0">
+          <div className="flex items-center gap-2">
             <OpponentHand tileCount={13} />
             <Melds melds={gameState?.melds?.[2] || []} />
           </div>
@@ -167,12 +167,11 @@ export function App() {
         </div>
 
         {/* Middle Row: Left (Kamicha) | CenterPanel | Right (Shimocha) */}
-        <div className="flex w-full items-center justify-between px-6 max-w-7xl">
+        <div className="flex w-full items-center justify-between px-4 max-w-7xl shrink-0 my-auto">
           {/* Left: Mortal 3 (Kamicha - West) */}
-          {/* Hand is at outer left edge, river is in front of hand facing center */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <OpponentHand tileCount={13} vertical={true} />
-            <div className="flex flex-col items-center gap-2">
+            <div className="flex flex-col items-center gap-1">
               <Melds melds={gameState?.melds?.[3] || []} />
               <River discards={gameState?.discards?.[3] || []} className="rotate-90 origin-center" />
             </div>
@@ -196,9 +195,8 @@ export function App() {
           )}
 
           {/* Right: Mortal 1 (Shimocha - East) */}
-          {/* River is on inner side facing center, hand is on outer right edge */}
-          <div className="flex items-center gap-3">
-            <div className="flex flex-col items-center gap-2">
+          <div className="flex items-center gap-2">
+            <div className="flex flex-col items-center gap-1">
               <River discards={gameState?.discards?.[1] || []} className="-rotate-90 origin-center" />
               <Melds melds={gameState?.melds?.[1] || []} />
             </div>
@@ -207,25 +205,26 @@ export function App() {
         </div>
 
         {/* Bottom: Player (You - South) */}
-        {/* River is in front facing center, Hand is at outer bottom edge */}
-        <div className="flex flex-col items-center gap-1.5 w-full">
-          {/* Action Bar (Chi/Pon/Kan/Riichi/Ron/Tsumo) */}
-          <div className="min-h-[44px] flex items-center justify-center">
-            <ActionBar
-              prompt={prompt}
-              onAction={sendAction}
-              isReachMode={isReachMode}
-              setIsReachMode={setIsReachMode}
-            />
-          </div>
+        <div className="relative flex flex-col items-center gap-1 w-full shrink-0 pb-1">
+          {/* Floating Action Bar (Appears right above player area when an action prompt is active) */}
+          {prompt && prompt.actions && prompt.actions.length > 0 && (
+            <div className="absolute -top-12 z-30 flex items-center justify-center">
+              <ActionBar
+                prompt={prompt}
+                onAction={sendAction}
+                isReachMode={isReachMode}
+                setIsReachMode={setIsReachMode}
+              />
+            </div>
+          )}
 
           {/* My River & Melds */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <River discards={gameState?.discards?.[0] || []} />
             <Melds melds={gameState?.melds?.[0] || []} />
           </div>
 
-          {/* My Hand Tiles (Enlarged 52x74 tiles) */}
+          {/* My Hand Tiles (Guaranteed visible at bottom) */}
           {gameState && (
             <PlayerHand
               hand={gameState.my_hand}

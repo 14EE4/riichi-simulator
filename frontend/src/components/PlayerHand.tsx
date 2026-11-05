@@ -32,9 +32,9 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   const validWaits = Array.isArray(waits) ? waits.filter(t => typeof t === 'string' && t.length > 0) : []
 
   return (
-    <div className="flex flex-col items-center gap-1.5 select-none">
+    <div className="flex flex-col items-center gap-1 select-none shrink-0">
       {/* Hand Status Bar: Shanten, Waits, Furiten alert */}
-      <div className="flex items-center gap-3 px-3 py-1 bg-slate-900/80 rounded-full border border-white/10 text-xs shadow-md">
+      <div className="flex items-center gap-2.5 px-2.5 py-0.5 bg-slate-900/80 rounded-full border border-white/10 text-xs shadow-md">
         <span className="font-semibold text-amber-400">
           {formatShanten(shanten)}
         </span>
@@ -42,7 +42,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
         {validWaits && validWaits.length > 0 && (
           <div className="flex items-center gap-1.5 text-slate-300">
             <span className="text-[11px] text-slate-400">대기패:</span>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5">
               {validWaits.map((waitTile, idx) => (
                 <MahjongTile key={idx} tile={waitTile} size="sm" />
               ))}
@@ -51,14 +51,14 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
         )}
 
         {furiten && (
-          <span className="px-1.5 py-0.5 rounded bg-red-600/90 text-white font-bold text-[10px]">
+          <span className="px-1.5 py-0.2 rounded bg-red-600/90 text-white font-bold text-[10px]">
             후리텐 (Furiten)
           </span>
         )}
       </div>
 
       {/* Tiles Container */}
-      <div className="flex items-end gap-0.5 px-3 py-2 rounded-xl bg-slate-950/70 border border-white/10 shadow-2xl backdrop-blur-md">
+      <div className="flex items-end gap-0.5 px-2.5 py-1.5 rounded-xl bg-slate-950/70 border border-white/10 shadow-2xl backdrop-blur-md">
         {/* Main 13 tiles */}
         <div className="flex items-end gap-0.5">
           {mainHand.map((tile, idx) => (
@@ -76,7 +76,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
 
         {/* Drawn tile with slight gap */}
         {drawnTile && (
-          <div className="ml-3 pl-2 flex items-end">
+          <div className="ml-2.5 pl-1.5 flex items-end">
             <MahjongTile
               tile={drawnTile}
               size="lg"
