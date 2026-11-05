@@ -56,7 +56,6 @@ export const CenterPanel: React.FC<CenterPanelProps> = ({
       </div>
 
       {/* Left Seat: Kamicha (Seat 3 - West) [Rotated 90deg facing West player] */}
-      {/* Container is fixed at left-1 to guarantee it never enters the center core area */}
       <div className="absolute left-1 top-1/2 -translate-y-1/2 w-8 h-36 flex items-center justify-center z-20">
         <div
           className={`w-36 h-7 flex items-center justify-between px-2 py-0.5 rounded-lg transition-all rotate-90 origin-center shrink-0 ${
@@ -78,28 +77,45 @@ export const CenterPanel: React.FC<CenterPanelProps> = ({
         </div>
       </div>
 
-      {/* Center Core Display: Round, Honba, Dora, Tiles Left */}
-      <div className="flex flex-col items-center justify-center gap-1.5 p-2 rounded-xl bg-black/70 border border-amber-500/30 shadow-inner z-10 w-40 h-36">
+      {/* Center Core Display: Round, Honba, Authentic Wanpai (Dead Wall 10 tiles), Tiles Left */}
+      <div className="flex flex-col items-center justify-center gap-1 p-2 rounded-xl bg-black/75 border border-amber-500/30 shadow-inner z-10 w-40 h-38">
         {/* Round Name */}
-        <div className="text-xs font-black tracking-wider text-amber-400">
+        <div className="text-[11px] font-black tracking-wider text-amber-400">
           {formatKyoku(bakaze, kyoku, honba)}
         </div>
 
-        {/* Dora Indicator Panel */}
-        <div className="flex flex-col items-center bg-slate-950/90 px-2 py-1 rounded-md border border-white/10 shadow-xs">
-          <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">DORA</span>
-          <div className="flex items-center gap-0.5 mt-0.5">
-            {doraMarkers.map((dora, idx) => (
-              <MahjongTile key={idx} tile={dora} size="sm" />
+        {/* Authentic Wanpai (Dead Wall): 2 rows of 5 tiles */}
+        <div className="flex flex-col items-center gap-0.5 bg-slate-950/90 px-1.5 py-1 rounded-md border border-white/10 shadow-xs">
+          <div className="flex items-center justify-between w-full px-0.5">
+            <span className="text-[8px] text-amber-400 font-bold tracking-wider">王牌 (도라)</span>
+            <span className="text-[8px] text-slate-500 font-mono">5×2</span>
+          </div>
+
+          {/* Top Row: 5 Dora Indicators (1st revealed initially, rest on Kan) */}
+          <div className="flex items-center gap-0.5">
+            {[0, 1, 2, 3, 4].map((idx) => {
+              const isOpen = idx < doraMarkers.length
+              return isOpen ? (
+                <MahjongTile key={`dora-${idx}`} tile={doraMarkers[idx]} size="xs" />
+              ) : (
+                <MahjongTile key={`dora-${idx}`} tile="1m" faceDown={true} size="xs" />
+              )
+            })}
+          </div>
+
+          {/* Bottom Row: 5 Ura-dora (All face down) */}
+          <div className="flex items-center gap-0.5">
+            {[0, 1, 2, 3, 4].map((idx) => (
+              <MahjongTile key={`ura-${idx}`} tile="1m" faceDown={true} size="xs" />
             ))}
           </div>
         </div>
 
         {/* Tiles Left & Riichi Sticks */}
-        <div className="flex items-center gap-2 text-xs font-mono font-bold text-slate-300">
+        <div className="flex items-center gap-2 text-[11px] font-mono font-bold text-slate-300">
           <span>남은패: <b className="text-emerald-400">{tilesLeft}</b></span>
           {kyotaku > 0 && (
-            <span className="flex items-center text-red-400">
+            <span className="flex items-center text-red-400" title={`리치봉 공탁 ${kyotaku}개`}>
               <span className="inline-block w-2 h-2 rounded-full bg-red-500 mr-1 shadow-xs" />
               {kyotaku}
             </span>
@@ -108,7 +124,6 @@ export const CenterPanel: React.FC<CenterPanelProps> = ({
       </div>
 
       {/* Right Seat: Shimocha (Seat 1 - East) [Rotated -90deg facing East player] */}
-      {/* Container is fixed at right-1 to guarantee it never enters the center core area */}
       <div className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-36 flex items-center justify-center z-20">
         <div
           className={`w-36 h-7 flex items-center justify-between px-2 py-0.5 rounded-lg transition-all -rotate-90 origin-center shrink-0 ${

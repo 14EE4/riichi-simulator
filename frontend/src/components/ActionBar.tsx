@@ -6,6 +6,7 @@ export interface PromptAction {
   actions: string[]
   options?: Record<string, any>
   target_tile?: string
+  riichi_discards?: string[]
 }
 
 interface ActionBarProps {
@@ -59,13 +60,13 @@ export const ActionBar: React.FC<ActionBarProps> = ({
       {canRiichi && (
         <button
           onClick={() => setIsReachMode(!isReachMode)}
-          className={`px-5 py-2.5 rounded-xl font-black text-sm text-white shadow-lg transition-all active:scale-95 cursor-pointer ring-2 ${
+          className={`px-4 py-2 rounded-xl font-black text-sm transition-all active:scale-95 cursor-pointer shadow-md ${
             isReachMode
-              ? 'bg-amber-500 ring-amber-300 shadow-amber-500/50'
-              : 'bg-gradient-to-r from-amber-600 to-yellow-600 ring-amber-400/50 hover:brightness-125'
+              ? 'bg-amber-400 text-slate-950 ring-2 ring-amber-300 shadow-amber-400/50 scale-105'
+              : 'bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-slate-950'
           }`}
         >
-          {isReachMode ? '타패할 패를 선택하세요' : '리치 (RIICHI)'}
+          {isReachMode ? '리치 취소' : '리치 (RIICHI)'}
         </button>
       )}
 
@@ -73,7 +74,7 @@ export const ActionBar: React.FC<ActionBarProps> = ({
       {canPon && (
         <button
           onClick={() => onAction('pon')}
-          className="px-4 py-2 rounded-xl font-bold text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md hover:brightness-125 transition-all active:scale-95 cursor-pointer border border-blue-400/40"
+          className="px-4 py-2 rounded-xl font-bold text-sm bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white shadow-md active:scale-95 cursor-pointer"
         >
           퐁 (PON)
         </button>
@@ -84,10 +85,10 @@ export const ActionBar: React.FC<ActionBarProps> = ({
         <button
           onClick={() => {
             const patterns = prompt.options?.chi_patterns || []
-            const consumed = patterns[0] || []
+            const consumed = patterns.length > 0 ? patterns[0] : []
             onAction('chi', { consumed })
           }}
-          className="px-4 py-2 rounded-xl font-bold text-sm bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-md hover:brightness-125 transition-all active:scale-95 cursor-pointer border border-teal-400/40"
+          className="px-4 py-2 rounded-xl font-bold text-sm bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white shadow-md active:scale-95 cursor-pointer"
         >
           치 (CHI)
         </button>
@@ -97,17 +98,17 @@ export const ActionBar: React.FC<ActionBarProps> = ({
       {canKan && (
         <button
           onClick={() => onAction('daiminkan')}
-          className="px-4 py-2 rounded-xl font-bold text-sm bg-gradient-to-r from-purple-600 to-violet-600 text-white shadow-md hover:brightness-125 transition-all active:scale-95 cursor-pointer border border-purple-400/40"
+          className="px-4 py-2 rounded-xl font-bold text-sm bg-gradient-to-r from-indigo-600 to-blue-700 hover:from-indigo-500 hover:to-blue-600 text-white shadow-md active:scale-95 cursor-pointer"
         >
           깡 (KAN)
         </button>
       )}
 
-      {/* Pass */}
+      {/* Pass (Available on any call action prompt) */}
       {isCall && (
         <button
           onClick={() => onAction('pass')}
-          className="px-4 py-2 rounded-xl font-bold text-sm bg-slate-800 text-slate-300 hover:bg-slate-700 transition-all active:scale-95 cursor-pointer border border-white/10"
+          className="px-4 py-2 rounded-xl font-bold text-sm bg-slate-800 hover:bg-slate-700 text-slate-300 border border-white/10 active:scale-95 transition-all cursor-pointer"
         >
           패스 (PASS)
         </button>

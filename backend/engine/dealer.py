@@ -10,7 +10,7 @@ _libriichi_loader.load()
 
 from libriichi.state import PlayerState, ActionCandidate
 from mortal_agent import MortalAgent, create_mortal_agents
-from scorer import MahjongScorer, INDEX_TO_MJAI
+from scorer import MahjongScorer, INDEX_TO_MJAI, get_riichi_discards
 
 def parse_waits_mask(waits_mask: Any) -> List[str]:
     """Convert libriichi 34-element boolean waits mask to mjai tile strings."""
@@ -221,7 +221,8 @@ class GameSession:
 
         self.current_turn = self.oya
         await self.emit_state("start_kyoku")
-        await asyncio.sleep(0.4)
+        if self.ai_delay > 0:
+            await asyncio.sleep(0.4)
 
         return await self.draw_tile(self.oya)
 
@@ -251,14 +252,49 @@ class GameSession:
 
         # Check if human turn
         if actor == 0:
+            # Case A: Human already declared Riichi
+            if self.riichi_declared[0]:
+                if cand.can_tsumo_agari:
+                    # Provide Tsumo Agari button (and Pass/Discard if declining tsumo)
+                    self.waiting_for_user = {
+                        "type": "turn_action",
+                        "actor": 0,
+                        "actions": ["tsumo_agari", "discard"],
+                        "tsumo": drawn,
+                        "shanten": 0,
+                        "waits": parse_waits_mask(self.player_states[0].waits),
+                        "at_furiten": self.player_states[0].at_furiten,
+                        "riichi_discards": [drawn],
+                    }
+                    res = {
+                        "event": "user_action_required",
+                        "state": self.get_client_state(),
+                        "prompt": self.waiting_for_user,
+                    }
+                    await self.emit_state("user_action_required")
+                    return res
+                else:
+                    # Automatic tsumogiri after visual confirmation
+                    await self.emit_state("tsumo")
+                    if self.ai_delay > 0:
+                        await asyncio.sleep(0.5)
+                    return await self.execute_discard(0, drawn, tsumogiri=True)
+
+            # Case B: Normal turn (not yet in Riichi)
             actions = ["discard"]
+            riichi_discards = []
             if cand.can_tsumo_agari:
                 actions.append("tsumo_agari")
-            if cand.can_riichi and not self.riichi_declared[0]:
-                actions.append("riichi")
-            if cand.can_ankan:
+
+            # Check Riichi eligibility (Menzen, >= 1000 points, wall >= 4)
+            if cand.can_riichi and not self.riichi_declared[0] and len(self.melds[0]) == 0 and self.scores[0] >= 1000 and len(self.wall) >= 4:
+                riichi_discards = get_riichi_discards(self.hands[0])
+                if riichi_discards:
+                    actions.append("riichi")
+
+            if cand.can_ankan and not self.riichi_declared[0]:
                 actions.append("ankan")
-            if cand.can_kakan:
+            if cand.can_kakan and not self.riichi_declared[0]:
                 actions.append("kakan")
 
             self.waiting_for_user = {
@@ -269,6 +305,7 @@ class GameSession:
                 "shanten": self.player_states[0].shanten,
                 "waits": parse_waits_mask(self.player_states[0].waits),
                 "at_furiten": self.player_states[0].at_furiten,
+                "riichi_discards": riichi_discards,
             }
             res = {
                 "event": "user_action_required",
@@ -299,7 +336,8 @@ class GameSession:
             # AI will discard next
             next_resp = self.mortal_agents[actor].react(ai_resp, can_act=True)
             discard_tile = next_resp.get("pai", drawn) if next_resp else drawn
-            return await self.execute_discard(actor, discard_tile, tsumogiri=(discard_tile == drawn), is_reach=True)
+            tsumogiri = next_resp.get("tsumogiri", discard_tile == drawn) if next_resp else True
+            return await self.execute_discard(actor, discard_tile, tsumogiri=tsumogiri, is_reach=True)
         elif resp_type == "dahai":
             discard_tile = ai_resp.get("pai", drawn)
             tsumogiri = ai_resp.get("tsumogiri", discard_tile == drawn)
@@ -315,24 +353,34 @@ class GameSession:
         is_reach: bool = False,
     ) -> Dict[str, Any]:
         """Actor discards a tile."""
-        if tile in self.hands[actor]:
+        # If tsumogiri, pop the drawn tile (last tile in hand) if it matches
+        if tsumogiri and len(self.hands[actor]) > 0 and self.hands[actor][-1] == tile:
+            self.hands[actor].pop()
+        elif tile in self.hands[actor]:
             self.hands[actor].remove(tile)
-        elif tsumogiri and len(self.hands[actor]) > 0:
+        elif len(self.hands[actor]) > 0:
             tile = self.hands[actor].pop()
+            tsumogiri = True
 
         self.hands[actor] = sort_tiles(self.hands[actor])
 
         if is_reach:
             self.riichi_declared[actor] = True
             reach_event = {"type": "reach", "actor": actor}
-            self.dispatch_public_event(reach_event)
+            # Note: if actor is an AI, it already reacted to reach_event in draw_tile
+            self.dispatch_public_event(reach_event, skip_agent=actor)
 
         self.discards[actor].append({
             "tile": tile,
             "tsumogiri": tsumogiri,
             "riichi": is_reach,
         })
-        self.last_discard = {"actor": actor, "tile": tile}
+        self.last_discard = {
+            "actor": actor,
+            "tile": tile,
+            "tsumogiri": tsumogiri,
+            "is_reach": is_reach,
+        }
 
         dahai_event = {
             "type": "dahai",
@@ -361,23 +409,28 @@ class GameSession:
             human_cand = cands[0]
             actions = []
             options = {}
+
+            # Ron is always allowed even in Riichi
             if human_cand.can_ron_agari:
                 actions.append("ron_agari")
-            if human_cand.can_pon:
-                actions.append("pon")
-            if human_cand.can_daiminkan:
-                actions.append("daiminkan")
-            if human_cand.can_chi and 0 == (actor + 1) % 4:
-                actions.append("chi")
-                options["chi_patterns"] = []
-                num = int(tile[0]) if tile[0] != "0" else 5
-                suit = tile[-1]
-                if suit in ("m", "p", "s"):
-                    hand_norms = [normalize_tile(t) for t in self.hands[0]]
-                    for p1_n, p2_n in [(num-2, num-1), (num-1, num+1), (num+1, num+2)]:
-                        t1, t2 = f"{p1_n}{suit}", f"{p2_n}{suit}"
-                        if t1 in hand_norms and t2 in hand_norms:
-                            options["chi_patterns"].append([t1, t2])
+
+            # In Riichi, human CANNOT Chi / Pon / Daiminkan!
+            if not self.riichi_declared[0]:
+                if human_cand.can_pon:
+                    actions.append("pon")
+                if human_cand.can_daiminkan:
+                    actions.append("daiminkan")
+                if human_cand.can_chi and 0 == (actor + 1) % 4:
+                    actions.append("chi")
+                    options["chi_patterns"] = []
+                    num = int(tile[0]) if tile[0] != "0" else 5
+                    suit = tile[-1]
+                    if suit in ("m", "p", "s"):
+                        hand_norms = [normalize_tile(t) for t in self.hands[0]]
+                        for p1_n, p2_n in [(num-2, num-1), (num-1, num+1), (num+1, num+2)]:
+                            t1, t2 = f"{p1_n}{suit}", f"{p2_n}{suit}"
+                            if t1 in hand_norms and t2 in hand_norms:
+                                options["chi_patterns"].append([t1, t2])
 
             if actions:
                 self.waiting_for_user = {
@@ -397,7 +450,7 @@ class GameSession:
                 return res
 
         # 5. Human cannot call; pause briefly so human can observe the discard
-        if DEFAULT_DISCARD_VIEW_SEC > 0:
+        if self.ai_delay > 0 and DEFAULT_DISCARD_VIEW_SEC > 0:
             await asyncio.sleep(DEFAULT_DISCARD_VIEW_SEC)
 
         # 6. Query AI players
@@ -410,13 +463,16 @@ class GameSession:
         cands: Dict[int, ActionCandidate],
     ) -> Dict[str, Any]:
         """Collect reactions from AI agents on the discard (exactly 1 call per bot)."""
-        dahai_line = json.dumps({"type": "dahai", "actor": discarder, "pai": tile, "tsumogiri": False})
+        tsumogiri = self.last_discard.get("tsumogiri", False) if self.last_discard else False
+        is_reach = self.last_discard.get("is_reach", False) if self.last_discard else False
+        dahai_line = json.dumps({"type": "dahai", "actor": discarder, "pai": tile, "tsumogiri": tsumogiri})
         ai_responses = {}
 
         for seat in sorted(self.mortal_agents.keys()):
             if seat == discarder:
                 continue
-            can_act = cands[seat].can_act if seat in cands else False
+            cand_obj = cands.get(seat)
+            can_act = cand_obj.can_act if cand_obj is not None else False
             resp = self.mortal_agents[seat].react(dahai_line, can_act=can_act)
             if resp and resp.get("type") != "none":
                 ai_responses[seat] = resp
@@ -424,25 +480,38 @@ class GameSession:
         # Priority 1: Ron (Hora)
         for seat, resp in ai_responses.items():
             if resp.get("type") == "hora":
-                await asyncio.sleep(0.4)
+                if self.ai_delay > 0:
+                    await asyncio.sleep(0.4)
                 return await self.handle_hora(seat, target_actor=discarder, is_tsumo=False)
+
+        # No Ron occurred: if discarder declared Riichi on this discard, accept Riichi now
+        if is_reach and not self.riichi_accepted[discarder]:
+            self.riichi_accepted[discarder] = True
+            if self.scores[discarder] >= 1000:
+                self.scores[discarder] -= 1000
+                self.kyoutaku += 1
+            self.dispatch_public_event({"type": "reach_accepted", "actor": discarder})
+            await self.emit_state("reach_accepted")
 
         # Priority 2: Pon / Kan
         for seat, resp in ai_responses.items():
             resp_type = resp.get("type")
             consumed = resp.get("consumed", [])
             if resp_type == "pon":
-                await asyncio.sleep(DEFAULT_CALL_DELAY_SEC)
+                if self.ai_delay > 0:
+                    await asyncio.sleep(DEFAULT_CALL_DELAY_SEC)
                 return await self.execute_pon(seat, discarder, tile, consumed)
             elif resp_type == "daiminkan":
-                await asyncio.sleep(DEFAULT_CALL_DELAY_SEC)
+                if self.ai_delay > 0:
+                    await asyncio.sleep(DEFAULT_CALL_DELAY_SEC)
                 return await self.execute_kan(seat, discarder, tile, consumed)
 
         # Priority 3: Chi (shimocha only)
         for seat, resp in ai_responses.items():
             if resp.get("type") == "chi" and seat == (discarder + 1) % 4:
                 consumed = resp.get("consumed", [])
-                await asyncio.sleep(DEFAULT_CALL_DELAY_SEC)
+                if self.ai_delay > 0:
+                    await asyncio.sleep(DEFAULT_CALL_DELAY_SEC)
                 return await self.execute_chi(seat, discarder, tile, consumed)
 
         # No calls made, advance to next player
@@ -502,7 +571,8 @@ class GameSession:
             await self.emit_state("user_action_required")
             return res
         else:
-            await asyncio.sleep(self.ai_delay)
+            if self.ai_delay > 0:
+                await asyncio.sleep(self.ai_delay)
             ai_resp = self.mortal_agents[actor].react(pon_event, can_act=True)
             discard_tile = ai_resp.get("pai", self.hands[actor][-1]) if ai_resp else self.hands[actor][-1]
             return await self.execute_discard(actor, discard_tile, tsumogiri=False)
@@ -549,7 +619,8 @@ class GameSession:
             await self.emit_state("user_action_required")
             return res
         else:
-            await asyncio.sleep(self.ai_delay)
+            if self.ai_delay > 0:
+                await asyncio.sleep(self.ai_delay)
             ai_resp = self.mortal_agents[actor].react(chi_event, can_act=True)
             discard_tile = ai_resp.get("pai", self.hands[actor][-1]) if ai_resp else self.hands[actor][-1]
             return await self.execute_discard(actor, discard_tile, tsumogiri=False)
@@ -611,6 +682,11 @@ class GameSession:
         if action == "discard":
             tile = data.get("tile")
             is_reach = data.get("is_reach", False)
+            # Validate if is_reach was requested: only allow if tile is in get_riichi_discards
+            if is_reach:
+                valid_riichi = get_riichi_discards(self.hands[0])
+                if tile not in valid_riichi:
+                    is_reach = False
             tsumogiri = (tile == self.last_tsumo)
             return await self.execute_discard(0, tile, tsumogiri=tsumogiri, is_reach=is_reach)
 
@@ -637,8 +713,8 @@ class GameSession:
             # Pass on call; continue to resolve AI reactions or advance turn
             target = self.last_discard["actor"]
             tile = self.last_discard["tile"]
-            # Remaining AI cands
-            cands = {s: self.player_states[s] for s in range(1, 4) if s != target}
+            # Use each AI's PlayerState.last_cans (ActionCandidate)
+            cands = {s: self.player_states[s].last_cans for s in range(1, 4) if s != target}
             return await self.resolve_ai_reactions(target, tile, cands)
 
         return {"event": "error", "message": f"Unknown action: {action}"}
@@ -709,6 +785,7 @@ class GameSession:
         else:
             self.honba = 0
             self.oya = (self.oya + 1) % 4
+            self.kyoku = (self.kyoku % 4) + 1
             if self.oya == 0:
                 self.bakaze_idx += 1
 
@@ -750,6 +827,7 @@ class GameSession:
         self.honba += 1
         if not dealer_tenpai:
             self.oya = (self.oya + 1) % 4
+            self.kyoku = (self.kyoku % 4) + 1
             if self.oya == 0:
                 self.bakaze_idx += 1
 
@@ -774,18 +852,24 @@ class GameSession:
 
     def get_client_state(self) -> Dict[str, Any]:
         """Serialize complete game board view for the frontend UI."""
+        # Keep the 14th drawn tile at the right end of my_hand
+        if len(self.hands[0]) % 3 == 2 and len(self.hands[0]) > 1:
+            my_hand = sort_tiles(self.hands[0][:-1]) + [self.hands[0][-1]]
+        else:
+            my_hand = sort_tiles(self.hands[0])
+
         return {
             "names": self.names,
             "scores": self.scores,
             "bakaze": BAKAZE_LIST[self.bakaze_idx] if self.bakaze_idx < 2 else "E",
             "kyoku": self.kyoku,
             "honba": self.honba,
-            "kyoutaku": self.kyoutaku,
+            "kyotaku": self.kyoutaku,
             "oya": self.oya,
             "dora_markers": self.dora_markers,
             "tiles_left": len(self.wall),
             "current_turn": self.current_turn,
-            "my_hand": sort_tiles(self.hands[0]),
+            "my_hand": my_hand,
             "my_shanten": self.player_states[0].shanten,
             "my_waits": parse_waits_mask(self.player_states[0].waits),
             "my_furiten": self.player_states[0].at_furiten,

@@ -3,6 +3,7 @@ from typing import List, Optional, Tuple, Dict, Any
 from mahjong.hand_calculating.hand import HandCalculator
 from mahjong.hand_calculating.hand_config import HandConfig, OptionalRules
 from mahjong.meld import Meld
+from mahjong.shanten import Shanten
 from mahjong.tile import TilesConverter
 
 from mahjong.constants import EAST, SOUTH, WEST, NORTH
@@ -61,17 +62,44 @@ def dora_indicator_to_dora_tile(indicator: str) -> str:
         order = ["P", "F", "C"]
         return order[(order.index(indicator) + 1) % 3]
 
+    num = int(indicator[0]) if indicator[0] != "0" else 5
     suit = indicator[-1]
-    num = 5 if indicator.startswith("5") else int(indicator[0])
-    dora_num = 1 if num == 9 else num + 1
-    return f"{dora_num}{suit}"
+    next_num = 1 if num == 9 else num + 1
+    return f"{next_num}{suit}"
+
+def get_riichi_discards(hand_14: List[str]) -> List[str]:
+    """Find all tiles in a 14-tile hand that, when discarded, leave the remaining 13 tiles in Tenpai (shanten == 0)."""
+    shanten_calc = Shanten()
+    valid_discards = []
+    seen = set()
+
+    for i, tile in enumerate(hand_14):
+        if tile in seen:
+            continue
+        seen.add(tile)
+
+        sub_hand = hand_14[:i] + hand_14[i+1:]
+        tiles_34 = [0] * 34
+        for t in sub_hand:
+            tiles_34[MJAI_TO_INDEX[t]] += 1
+
+        if shanten_calc.calculate_shanten(tiles_34) == 0:
+            valid_discards.append(tile)
+
+    return valid_discards
 
 class MahjongScorer:
+    """Calculates official Japanese Riichi Mahjong scores using the python-mahjong library."""
+
     def __init__(self):
         self.calculator = HandCalculator()
         self.optional_rules = OptionalRules(
             has_open_tanyao=True,
             has_aka_dora=True,
+            has_double_yakuman=True,
+            renhou_as_yakuman=False,
+            has_daisharin=False,
+            has_daisharin_other_suits=False,
         )
 
     def calculate_score(
@@ -83,67 +111,44 @@ class MahjongScorer:
         is_dealer: bool,
         dora_indicators: List[str],
         ura_dora_indicators: Optional[List[str]] = None,
+        melds: Optional[List[Dict[str, Any]]] = None,
         is_ippatsu: bool = False,
         is_rinshan: bool = False,
         is_chankan: bool = False,
         is_haitei: bool = False,
         is_houtei: bool = False,
         is_double_riichi: bool = False,
-        round_wind: int = 27,  # 27: East, 28: South
-        seat_wind: int = 27,   # 27: East, 28: South, 29: West, 30: North
-        melds: Optional[List[Dict[str, Any]]] = None,
+        player_wind: str = "E",
+        round_wind: str = "E",
     ) -> Dict[str, Any]:
+        """Evaluate hand and calculate han, fu, yaku, and point payments."""
         used_indices: set[int] = set()
 
-        # Ensure hand_tiles contains the winning tile (14 tiles total for menzen)
-        all_tiles = list(hand_tiles)
-        if win_tile not in all_tiles:
-            all_tiles.append(win_tile)
+        tiles_136 = [tile_to_136(t, used_indices) for t in hand_tiles]
+        win_tile_136 = tile_to_136(win_tile, used_indices)
 
-        used_indices: set[int] = set()
-        tiles_136 = []
-        win_tile_136 = None
-        for t in all_tiles:
-            idx = tile_to_136(t, used_indices)
-            tiles_136.append(idx)
-            if t == win_tile and win_tile_136 is None:
-                win_tile_136 = idx
+        dora_136 = [tile_to_136(d, used_indices) for d in dora_indicators]
+        if ura_dora_indicators:
+            dora_136 += [tile_to_136(u, used_indices) for u in ura_dora_indicators]
 
-        if win_tile_136 is None:
-            win_tile_136 = tiles_136[-1]
-
-        # Convert dora indicators to dora 136
-        dora_136 = []
-        for ind in dora_indicators:
-            dora_tile = dora_indicator_to_dora_tile(ind)
-            dora_136.append(tile_to_136(dora_tile, set()))
-
-        ura_136 = []
-        if is_riichi and ura_dora_indicators:
-            for ind in ura_dora_indicators:
-                dora_tile = dora_indicator_to_dora_tile(ind)
-                ura_136.append(tile_to_136(dora_tile, set()))
-
-        # Parse melds if any
         converted_melds = []
         if melds:
             for m in melds:
-                m_type = m.get("type")
-                m_tiles = [tile_to_136(t, used_indices) for t in m.get("tiles", [])]
+                m_type = m["type"]
+                m_tiles_136 = [tile_to_136(t, used_indices) for t in m["tiles"]]
                 if m_type == "chi":
-                    converted_melds.append(Meld(meld_type=Meld.CHI, tiles=m_tiles))
+                    converted_melds.append(Meld(Meld.CHI, m_tiles_136, opened=True))
                 elif m_type == "pon":
-                    converted_melds.append(Meld(meld_type=Meld.PON, tiles=m_tiles))
-                elif m_type in ("daiminkan", "kakan", "ankan"):
-                    converted_melds.append(Meld(
-                        meld_type=Meld.KAN,
-                        tiles=m_tiles,
-                        opened=(m_type != "ankan")
-                    ))
+                    converted_melds.append(Meld(Meld.PON, m_tiles_136, opened=True))
+                elif m_type == "daiminkan":
+                    converted_melds.append(Meld(Meld.KAN, m_tiles_136, opened=True))
+                elif m_type == "ankan":
+                    converted_melds.append(Meld(Meld.KAN, m_tiles_136, opened=False))
+                elif m_type == "kakan":
+                    converted_melds.append(Meld(Meld.CHANKAN, m_tiles_136, opened=True))
 
-        # Dealer is EAST
-        p_wind = EAST if is_dealer else seat_wind
-        r_wind = round_wind
+        p_wind = WINDS[INDEX_TO_MJAI.index(player_wind) - 27] if player_wind in ("E", "S", "W", "N") else EAST
+        r_wind = WINDS[INDEX_TO_MJAI.index(round_wind) - 27] if round_wind in ("E", "S", "W", "N") else EAST
 
         config = HandConfig(
             is_tsumo=is_tsumo,

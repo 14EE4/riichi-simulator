@@ -14,7 +14,7 @@ interface GameState {
   bakaze: string
   kyoku: number
   honba: number
-  kyoutaku: number
+  kyotaku: number
   oya: number
   dora_markers: string[]
   tiles_left: number
@@ -104,16 +104,23 @@ export function App() {
 
   const handleNewGame = () => {
     setRoundResult(null)
+    setIsReachMode(false)
     sendAction('start_game')
   }
 
   const handleNextKyoku = () => {
     setRoundResult(null)
+    setIsReachMode(false)
     sendAction('next_kyoku')
   }
 
   const isMyTurn = gameState?.current_turn === 0
   const canDiscard = isMyTurn && !!prompt?.actions?.includes('discard')
+
+  const getClosedTileCount = (seat: number) => {
+    const meldCount = gameState?.melds?.[seat]?.length || 0
+    return Math.max(1, 13 - meldCount * 3)
+  }
 
   return (
     <div className="relative flex flex-col h-screen w-screen overflow-hidden bg-radial from-slate-900 via-slate-950 to-black text-slate-100 select-none">
@@ -157,11 +164,10 @@ export function App() {
       {/* Main Mahjong Mat (Table) */}
       <main className="relative flex-1 flex flex-col items-center justify-between px-2 py-1 overflow-hidden">
         {/* Top: Mortal 2 (Toimen - North) */}
-        {/* Hand is at outer edge, river is in front of hand facing center */}
         <div className="flex flex-col items-center gap-1 shrink-0">
           <div className="flex items-center gap-2">
-            <OpponentHand tileCount={13} />
-            <Melds melds={gameState?.melds?.[2] || []} />
+            <Melds melds={gameState?.melds?.[2] || []} orientation="top" />
+            <OpponentHand tileCount={getClosedTileCount(2)} />
           </div>
           <River discards={gameState?.discards?.[2] || []} className="rotate-180 origin-center" />
         </div>
@@ -169,21 +175,24 @@ export function App() {
         {/* Middle Row: Left (Kamicha) | CenterPanel | Right (Shimocha) */}
         <div className="flex w-full items-center justify-between px-4 max-w-7xl shrink-0 my-auto">
           {/* Left: Mortal 3 (Kamicha - West) */}
-          <div className="flex items-center gap-2">
-            <OpponentHand tileCount={13} vertical={true} />
-            <div className="flex flex-col items-center gap-1">
-              <Melds melds={gameState?.melds?.[3] || []} />
+          {/* Outer column holds hand + melds; inner column holds rotated river with explicit bounding box */}
+          <div className="flex items-center gap-3">
+            <div className="flex flex-col items-center justify-center gap-2 shrink-0">
+              <OpponentHand tileCount={getClosedTileCount(3)} vertical={true} />
+              <Melds melds={gameState?.melds?.[3] || []} orientation="left" />
+            </div>
+            <div className="w-[125px] h-[195px] flex items-center justify-center shrink-0">
               <River discards={gameState?.discards?.[3] || []} className="rotate-90 origin-center" />
             </div>
           </div>
 
-          {/* Center Info Panel (Authentic Mahjong Table Display with Per-Seat Rotation) */}
+          {/* Center Info Panel with Authentic Wanpai 10-tile dead wall */}
           {gameState && (
             <CenterPanel
               bakaze={gameState.bakaze}
               kyoku={gameState.kyoku}
               honba={gameState.honba}
-              kyotaku={gameState.kyoutaku}
+              kyotaku={gameState.kyotaku}
               oya={gameState.oya}
               doraMarkers={gameState.dora_markers}
               tilesLeft={gameState.tiles_left}
@@ -195,18 +204,21 @@ export function App() {
           )}
 
           {/* Right: Mortal 1 (Shimocha - East) */}
-          <div className="flex items-center gap-2">
-            <div className="flex flex-col items-center gap-1">
+          {/* Inner column holds rotated river with explicit bounding box; outer column holds melds + hand */}
+          <div className="flex items-center gap-3">
+            <div className="w-[125px] h-[195px] flex items-center justify-center shrink-0">
               <River discards={gameState?.discards?.[1] || []} className="-rotate-90 origin-center" />
-              <Melds melds={gameState?.melds?.[1] || []} />
             </div>
-            <OpponentHand tileCount={13} vertical={true} />
+            <div className="flex flex-col items-center justify-center gap-2 shrink-0">
+              <Melds melds={gameState?.melds?.[1] || []} orientation="right" />
+              <OpponentHand tileCount={getClosedTileCount(1)} vertical={true} />
+            </div>
           </div>
         </div>
 
         {/* Bottom: Player (You - South) */}
         <div className="relative flex flex-col items-center gap-1 w-full shrink-0 pb-1">
-          {/* Floating Action Bar (Appears right above player area when an action prompt is active) */}
+          {/* Floating Action Bar */}
           {prompt && prompt.actions && prompt.actions.length > 0 && (
             <div className="absolute -top-12 z-30 flex items-center justify-center">
               <ActionBar
@@ -218,25 +230,28 @@ export function App() {
             </div>
           )}
 
-          {/* My River & Melds */}
-          <div className="flex items-center gap-3">
+          {/* My River */}
+          <div className="flex items-center justify-center">
             <River discards={gameState?.discards?.[0] || []} />
-            <Melds melds={gameState?.melds?.[0] || []} />
           </div>
 
-          {/* My Hand Tiles (Guaranteed visible at bottom) */}
+          {/* My Hand Tiles + My Melds on the right */}
           {gameState && (
-            <PlayerHand
-              hand={gameState.my_hand}
-              isMyTurn={isMyTurn}
-              canDiscard={canDiscard}
-              isReachReady={isReachMode}
-              selectedTile={selectedTile}
-              onTileClick={handleTileClick}
-              shanten={gameState.my_shanten}
-              waits={gameState.my_waits}
-              furiten={gameState.my_furiten}
-            />
+            <div className="flex items-end justify-center gap-3">
+              <PlayerHand
+                hand={gameState.my_hand}
+                isMyTurn={isMyTurn}
+                canDiscard={canDiscard}
+                isReachReady={isReachMode}
+                riichiDiscards={prompt?.riichi_discards || []}
+                selectedTile={selectedTile}
+                onTileClick={handleTileClick}
+                shanten={gameState.my_shanten}
+                waits={gameState.my_waits}
+                furiten={gameState.my_furiten}
+              />
+              <Melds melds={gameState?.melds?.[0] || []} orientation="bottom" />
+            </div>
           )}
         </div>
       </main>

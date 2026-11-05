@@ -22,7 +22,7 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
         <MahjongTile
           key={idx}
           tile="1m"
-          size="sm"
+          size="xs"
           faceDown={true}
           horizontal={vertical}
         />
