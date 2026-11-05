@@ -46,15 +46,53 @@ export const ResultModal: React.FC<ResultModalProps> = ({
     return `${total.toLocaleString()} 점`
   }
 
+  const getYakuLevelBadge = () => {
+    const info = result.score_info
+    if (!info) return null
+    let name = info.yaku_level_name
+    if (!name) {
+      const han = info.han || 0
+      const fu = info.fu || 0
+      const raw = (info.cost?.yaku_level || '').toLowerCase()
+      const isYakuman = info.yaku?.some((y: any) => y.is_yakuman)
+      if (isYakuman || raw.includes('yakuman') || han >= 13) name = '역만 (役満)'
+      else if (raw.includes('sanbaiman') || han >= 11) name = '삼배만 (三倍満)'
+      else if (raw.includes('baiman') || han >= 8) name = '배만 (倍満)'
+      else if (raw.includes('haneman') || han >= 6) name = '하네만 (跳満)'
+      else if (raw.includes('mangan') || han >= 5 || (han === 4 && fu >= 40) || (han === 3 && fu >= 70))
+        name = '만관 (満貫)'
+    }
+    if (!name) return null
+
+    const isYakuman = name.includes('역만')
+    const isHigh = name.includes('배만') || name.includes('삼배만')
+    return (
+      <span
+        className={`px-2.5 py-1 rounded-lg text-xs font-black tracking-wider shadow-md ${
+          isYakuman
+            ? 'bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 text-white animate-pulse'
+            : isHigh
+            ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-white'
+            : 'bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-bold'
+        }`}
+      >
+        {name}
+      </span>
+    )
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-fade-in">
       <div className="w-[620px] max-w-[95vw] rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-amber-500/50 p-6 shadow-2xl flex flex-col items-center gap-4">
         {/* Title Header */}
-        <div className="text-center">
+        <div className="flex flex-col items-center gap-1.5 text-center">
           {isHora && (
-            <h2 className="text-2xl font-black tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500">
-              {result.winner_name} {result.is_tsumo ? '쯔모 화료 (自摸和了)!' : '론 화료 (栄和)!'}
-            </h2>
+            <>
+              <h2 className="text-2xl font-black tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500">
+                {result.winner_name} {result.is_tsumo ? '쯔모 화료 (自摸和了)!' : '론 화료 (栄和)!'}
+              </h2>
+              {getYakuLevelBadge()}
+            </>
           )}
           {isRyuukyoku && (
             <h2 className="text-2xl font-black tracking-wide text-slate-300">
@@ -158,10 +196,13 @@ export const ResultModal: React.FC<ResultModalProps> = ({
 
             {/* Total Han & Fu & Cost */}
             <div className="flex items-center justify-between text-base font-bold">
-              <span className="text-slate-400">
-                {result.score_info.han}판 {result.score_info.fu}부
-              </span>
-              <span className="text-xl text-amber-300 font-mono">
+              <div className="flex items-center gap-2">
+                <span className="text-slate-300 font-bold">
+                  {result.score_info.han}판 {result.score_info.fu}부
+                </span>
+                {getYakuLevelBadge()}
+              </div>
+              <span className="text-xl text-amber-300 font-mono font-black">
                 {getScoreDisplay()}
               </span>
             </div>

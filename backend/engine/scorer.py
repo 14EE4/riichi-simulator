@@ -266,12 +266,30 @@ class MahjongScorer:
                 })
 
         cost = result.cost or {"main": 0, "additional": 0, "total": 0}
+        han = result.han or 0
+        fu = result.fu or 0
+        raw_level = (cost.get("yaku_level") or "").lower()
+        is_any_yakuman = any(y.get("is_yakuman", False) for y in yaku_list)
+
+        if is_any_yakuman or "yakuman" in raw_level or han >= 13:
+            yaku_level_name = "역만 (役満)"
+        elif "sanbaiman" in raw_level or han >= 11:
+            yaku_level_name = "삼배만 (三倍満)"
+        elif "baiman" in raw_level or han >= 8:
+            yaku_level_name = "배만 (倍満)"
+        elif "haneman" in raw_level or han >= 6:
+            yaku_level_name = "하네만 (跳満)"
+        elif "mangan" in raw_level or han >= 5 or (han == 4 and fu >= 40) or (han == 3 and fu >= 70):
+            yaku_level_name = "만관 (満貫)"
+        else:
+            yaku_level_name = ""
 
         return {
             "error": result.error,
-            "han": result.han or 0,
-            "fu": result.fu or 0,
+            "han": han,
+            "fu": fu,
             "cost": cost,
+            "yaku_level_name": yaku_level_name,
             "yaku": yaku_list,
             "is_dealer": is_dealer,
             "is_tsumo": is_tsumo,

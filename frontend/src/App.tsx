@@ -44,6 +44,7 @@ export function App() {
     winnerName: string
     pai: string
     hand: string[]
+    yakuLevel?: string
   } | null>(null)
 
   const socketRef = useRef<WebSocket | null>(null)
@@ -75,12 +76,28 @@ export function App() {
         }
 
         if (data.event === 'hora') {
+          const info = data.result.score_info
+          let yakuLevel = info?.yaku_level_name || ''
+          if (!yakuLevel && info) {
+            const han = info.han || 0
+            const fu = info.fu || 0
+            const raw = (info.cost?.yaku_level || '').toLowerCase()
+            const isYakuman = info.yaku?.some((y: any) => y.is_yakuman)
+            if (isYakuman || raw.includes('yakuman') || han >= 13) yakuLevel = '역만 (役満)'
+            else if (raw.includes('sanbaiman') || han >= 11) yakuLevel = '삼배만 (三倍満)'
+            else if (raw.includes('baiman') || han >= 8) yakuLevel = '배만 (倍満)'
+            else if (raw.includes('haneman') || han >= 6) yakuLevel = '하네만 (跳満)'
+            else if (raw.includes('mangan') || han >= 5 || (han === 4 && fu >= 40) || (han === 3 && fu >= 70))
+              yakuLevel = '만관 (満貫)'
+          }
+
           setHoraAnnouncement({
             actor: data.result.actor,
             isTsumo: data.result.is_tsumo,
             winnerName: data.result.winner_name,
             pai: data.result.pai,
             hand: data.result.winner_hand,
+            yakuLevel,
           })
           setTimeout(() => {
             setHoraAnnouncement(null)
@@ -313,11 +330,16 @@ export function App() {
             >
               {horaAnnouncement.isTsumo ? '쯔모 (TSUMO) !' : '론 (RON) !'}
             </div>
-            <div className="text-xl font-bold text-slate-200">
-              <span className="text-amber-400 font-black text-2xl mr-1">
+            <div className="text-xl font-bold text-slate-200 flex items-center gap-2">
+              <span className="text-amber-400 font-black text-2xl">
                 {horaAnnouncement.winnerName}
-              </span>{' '}
-              화료!
+              </span>
+              <span>화료!</span>
+              {horaAnnouncement.yakuLevel && (
+                <span className="px-2.5 py-0.5 rounded-lg text-sm font-black bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 shadow-md">
+                  {horaAnnouncement.yakuLevel}
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-3 mt-1 bg-black/50 px-4 py-1.5 rounded-xl border border-white/10">
               <span className="text-xs font-bold text-slate-400">화료패:</span>
