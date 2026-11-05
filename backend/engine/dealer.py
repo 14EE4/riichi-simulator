@@ -130,6 +130,35 @@ class GameSession:
             if asyncio.iscoroutine(res):
                 await res
 
+    def resolve_consumed(self, actor: int, consumed: List[str]) -> List[str]:
+        """Map requested consumed tiles to the exact tiles in the actor's hand.
+
+        UI/defaults use normalized names ('5m'), but the hand may hold the red five ('5mr').
+        Without this the meld shows a duplicated normal 5 while the red 5 stays in the hand.
+        Human prefers the red five when a normalized 5 is requested; AI requests are kept exact.
+        """
+        remaining = list(self.hands[actor])
+        resolved: List[str] = []
+        for t in consumed:
+            pick = None
+            if actor == 0 and t in ("5m", "5p", "5s"):
+                red = t + "r"
+                if red in remaining:
+                    pick = red
+            if pick is None and t in remaining:
+                pick = t
+            if pick is None:
+                norm = normalize_tile(t)
+                for h in remaining:
+                    if normalize_tile(h) == norm:
+                        pick = h
+                        break
+            if pick is None:
+                pick = t
+            else:
+                remaining.remove(pick)
+            resolved.append(pick)
+        return resolved
     def dispatch_public_event(self, event: Dict[str, Any], skip_agent: Optional[int] = None):
         """Broadcast an event visible to all players identically."""
         line = json.dumps(event)
@@ -527,6 +556,7 @@ class GameSession:
     async def execute_pon(self, actor: int, target_actor: int, tile: str, consumed: List[str]) -> Dict[str, Any]:
         """Execute a Pon call."""
         self.ippatsu = [False] * 4
+        consumed = self.resolve_consumed(actor, consumed)
         if len(self.discards[target_actor]) > 0:
             self.discards[target_actor].pop()
 
@@ -587,6 +617,7 @@ class GameSession:
     async def execute_chi(self, actor: int, target_actor: int, tile: str, consumed: List[str]) -> Dict[str, Any]:
         """Execute a Chi call."""
         self.ippatsu = [False] * 4
+        consumed = self.resolve_consumed(actor, consumed)
         if len(self.discards[target_actor]) > 0:
             self.discards[target_actor].pop()
 
@@ -636,6 +667,7 @@ class GameSession:
     async def execute_kan(self, actor: int, target_actor: int, tile: str, consumed: List[str]) -> Dict[str, Any]:
         """Execute a Daiminkan call."""
         self.ippatsu = [False] * 4
+        consumed = self.resolve_consumed(actor, consumed)
         if len(self.discards[target_actor]) > 0:
             self.discards[target_actor].pop()
 
