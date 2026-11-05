@@ -157,28 +157,28 @@ export function App() {
       </header>
 
       {/* Main Mahjong Mat (Table) */}
-      <main className="relative flex-1 flex flex-col items-center justify-between p-4 overflow-hidden">
-        {/* Top: Mortal 2 (Toimen) */}
-        <div className="flex flex-col items-center gap-2">
-          <div className="flex items-center gap-4">
+      <main className="relative flex-1 flex flex-col items-center justify-between p-2 overflow-hidden">
+        {/* Top: Mortal 2 (Toimen - North) [Rotated 180deg facing center] */}
+        <div className="flex flex-col items-center gap-1 rotate-180 origin-center">
+          <div className="flex items-center gap-3">
             <OpponentHand tileCount={13} />
             <Melds melds={gameState?.melds?.[2] || []} />
           </div>
           <River discards={gameState?.discards?.[2] || []} />
         </div>
 
-        {/* Middle Row: Left (Mortal 3) | CenterPanel | Right (Mortal 1) */}
-        <div className="flex w-full items-center justify-between px-8">
-          {/* Left: Mortal 3 (Kamicha) */}
-          <div className="flex items-center gap-3">
-            <OpponentHand tileCount={13} vertical={true} />
-            <div className="flex flex-col items-center gap-2">
-              <River discards={gameState?.discards?.[3] || []} />
+        {/* Middle Row: Left (Mortal 3 - Kamicha) | CenterPanel | Right (Mortal 1 - Shimocha) */}
+        <div className="flex w-full items-center justify-between px-4 max-w-6xl">
+          {/* Left: Mortal 3 (Kamicha - West) [Rotated 90deg facing center] */}
+          <div className="flex flex-col items-center gap-1 rotate-90 origin-center">
+            <div className="flex items-center gap-3">
+              <OpponentHand tileCount={13} />
               <Melds melds={gameState?.melds?.[3] || []} />
             </div>
+            <River discards={gameState?.discards?.[3] || []} />
           </div>
 
-          {/* Center Info Panel */}
+          {/* Center Info Panel (Keeps 0deg upright for readability) */}
           {gameState && (
             <CenterPanel
               bakaze={gameState.bakaze}
@@ -195,20 +195,20 @@ export function App() {
             />
           )}
 
-          {/* Right: Mortal 1 (Shimocha) */}
-          <div className="flex items-center gap-3">
-            <div className="flex flex-col items-center gap-2">
-              <River discards={gameState?.discards?.[1] || []} />
+          {/* Right: Mortal 1 (Shimocha - East) [Rotated -90deg facing center] */}
+          <div className="flex flex-col items-center gap-1 -rotate-90 origin-center">
+            <div className="flex items-center gap-3">
+              <OpponentHand tileCount={13} />
               <Melds melds={gameState?.melds?.[1] || []} />
             </div>
-            <OpponentHand tileCount={13} vertical={true} />
+            <River discards={gameState?.discards?.[1] || []} />
           </div>
         </div>
 
-        {/* Bottom: Player (You) Hand & River & Action Bar */}
-        <div className="flex flex-col items-center gap-2 w-full">
+        {/* Bottom: Player (You - South) [0deg normal orientation] */}
+        <div className="flex flex-col items-center gap-1 w-full">
           {/* Action Bar (Chi/Pon/Kan/Riichi/Ron/Tsumo) */}
-          <div className="min-h-[48px] flex items-center justify-center">
+          <div className="min-h-[44px] flex items-center justify-center">
             <ActionBar
               prompt={prompt}
               onAction={sendAction}
@@ -217,7 +217,7 @@ export function App() {
             />
           </div>
 
-          {/* My River */}
+          {/* My River & Melds */}
           <div className="flex items-center gap-4">
             <River discards={gameState?.discards?.[0] || []} />
             <Melds melds={gameState?.melds?.[0] || []} />

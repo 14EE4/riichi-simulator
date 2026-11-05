@@ -399,10 +399,36 @@ class GameSession:
 
     def execute_pon(self, actor: int, target_actor: int, tile: str, consumed: List[str]) -> Dict[str, Any]:
         """Execute a Pon call."""
+        # 1. Remove tile from discarder's river
+        if len(self.discards[target_actor]) > 0:
+            self.discards[target_actor].pop()
+
+        # 2. Remove consumed tiles from hand
         for t in consumed:
             if t in self.hands[actor]:
                 self.hands[actor].remove(t)
-        meld = {"type": "pon", "tiles": sort_tiles(consumed + [tile]), "from": target_actor}
+
+        # 3. Determine rotated tile position based on who discarded it
+        # (rel == 3: Kamicha (Left), rel == 2: Toimen (Mid), rel == 1: Shimocha (Right))
+        rel = (target_actor - actor) % 4
+        c = list(consumed)
+        if rel == 3:      # Kamicha -> Left tile horizontal
+            tiles = [tile, c[0], c[1]]
+            rot_idx = 0
+        elif rel == 2:    # Toimen -> Center tile horizontal
+            tiles = [c[0], tile, c[1]]
+            rot_idx = 1
+        else:             # Shimocha -> Right tile horizontal
+            tiles = [c[0], c[1], tile]
+            rot_idx = 2
+
+        meld = {
+            "type": "pon",
+            "tiles": tiles,
+            "from": target_actor,
+            "rot_idx": rot_idx,
+            "called_tile": tile,
+        }
         self.melds[actor].append(meld)
 
         pon_event = {"type": "pon", "actor": actor, "target": target_actor, "pai": tile, "consumed": consumed}
@@ -430,10 +456,25 @@ class GameSession:
 
     def execute_chi(self, actor: int, target_actor: int, tile: str, consumed: List[str]) -> Dict[str, Any]:
         """Execute a Chi call."""
+        # 1. Remove tile from discarder's river
+        if len(self.discards[target_actor]) > 0:
+            self.discards[target_actor].pop()
+
+        # 2. Remove consumed tiles from hand
         for t in consumed:
             if t in self.hands[actor]:
                 self.hands[actor].remove(t)
-        meld = {"type": "chi", "tiles": sort_tiles(consumed + [tile]), "from": target_actor}
+
+        # 3. Chi is always from Kamicha (Left), so the called tile sits at index 0 (horizontal)
+        consumed_sorted = sort_tiles(consumed)
+        tiles = [tile] + consumed_sorted
+        meld = {
+            "type": "chi",
+            "tiles": tiles,
+            "from": target_actor,
+            "rot_idx": 0,
+            "called_tile": tile,
+        }
         self.melds[actor].append(meld)
 
         chi_event = {"type": "chi", "actor": actor, "target": target_actor, "pai": tile, "consumed": consumed}
@@ -460,14 +501,38 @@ class GameSession:
 
     def execute_kan(self, actor: int, target_actor: int, tile: str, consumed: List[str]) -> Dict[str, Any]:
         """Execute a Daiminkan call."""
+        # 1. Remove tile from discarder's river
+        if len(self.discards[target_actor]) > 0:
+            self.discards[target_actor].pop()
+
+        # 2. Remove consumed tiles from hand
         for t in consumed:
             if t in self.hands[actor]:
                 self.hands[actor].remove(t)
-        meld = {"type": "daiminkan", "tiles": consumed + [tile], "from": target_actor}
+
+        rel = (target_actor - actor) % 4
+        c = list(consumed)
+        if rel == 3:      # Kamicha -> Left tile horizontal
+            tiles = [tile, c[0], c[1], c[2]]
+            rot_idx = 0
+        elif rel == 2:    # Toimen -> 2nd tile horizontal
+            tiles = [c[0], tile, c[1], c[2]]
+            rot_idx = 1
+        else:             # Shimocha -> Right tile horizontal
+            tiles = [c[0], c[1], c[2], tile]
+            rot_idx = 3
+
+        meld = {
+            "type": "daiminkan",
+            "tiles": tiles,
+            "from": target_actor,
+            "rot_idx": rot_idx,
+            "called_tile": tile,
+        }
         self.melds[actor].append(meld)
 
         kan_event = {"type": "daiminkan", "actor": actor, "target": target_actor, "pai": tile, "consumed": consumed}
-        self.dispatch_public_event(kan_event)
+        self.dispatch_public_event(kan_event, skip_agent=actor)
 
         # Open new dora indicator from dead wall
         if len(self.dora_markers) < 5:
