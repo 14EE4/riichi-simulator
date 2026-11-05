@@ -203,7 +203,7 @@ export function App() {
         {/* Top-Left Corner: 5 Dora Indicator Tiles (Wanpai top row) */}
         {gameState && (
           <div className="absolute top-2.5 left-4 z-20 flex flex-col gap-1 px-2.5 py-1.5 rounded-xl bg-slate-950/85 border border-amber-500/30 shadow-lg backdrop-blur-md">
-            <span className="text-[10px] font-bold text-amber-400 tracking-wider">도라 표시패 (DORA)</span>
+            <span className="text-[10px] font-bold text-amber-400 tracking-wider">도라 표시패 (ドラ)</span>
             <div className="flex items-center gap-1">
               {[0, 1, 2, 3, 4].map((idx) => {
                 const isOpen = idx < (gameState.dora_markers?.length || 0)
@@ -328,7 +328,7 @@ export function App() {
                   : 'text-transparent bg-clip-text bg-gradient-to-r from-rose-400 via-red-500 to-rose-600 drop-shadow-[0_4px_16px_rgba(244,63,94,0.8)]'
               }`}
             >
-              {horaAnnouncement.isTsumo ? '쯔모 (TSUMO) !' : '론 (RON) !'}
+              {horaAnnouncement.isTsumo ? '쯔모 (ツモ / 自摸) !' : '론 (ロン / 栄和) !'}
             </div>
             <div className="text-xl font-bold text-slate-200 flex items-center gap-2">
               <span className="text-amber-400 font-black text-2xl">

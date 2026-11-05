@@ -42,7 +42,7 @@ export const ActionBar: React.FC<ActionBarProps> = ({
           onClick={() => onAction('ron_agari')}
           className="px-5 py-2.5 rounded-xl font-black text-sm bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white shadow-lg shadow-red-600/50 hover:brightness-125 transition-all active:scale-95 cursor-pointer ring-2 ring-red-400"
         >
-          론 (RON)
+          론 (ロン / 栄和)
         </button>
       )}
 
@@ -52,7 +52,7 @@ export const ActionBar: React.FC<ActionBarProps> = ({
           onClick={() => onAction('tsumo_agari')}
           className="px-5 py-2.5 rounded-xl font-black text-sm bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white shadow-lg shadow-red-600/50 hover:brightness-125 transition-all active:scale-95 cursor-pointer ring-2 ring-red-400"
         >
-          쯔모 (TSUMO)
+          쯔모 (ツモ / 自摸)
         </button>
       )}
 
@@ -66,7 +66,7 @@ export const ActionBar: React.FC<ActionBarProps> = ({
               : 'bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-slate-950'
           }`}
         >
-          {isReachMode ? '리치 취소' : '리치 (RIICHI)'}
+          {isReachMode ? '리치 취소' : '리치 (リーチ / 立直)'}
         </button>
       )}
 
@@ -76,7 +76,7 @@ export const ActionBar: React.FC<ActionBarProps> = ({
           onClick={() => onAction('pon')}
           className="px-4 py-2 rounded-xl font-bold text-sm bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white shadow-md active:scale-95 cursor-pointer"
         >
-          퐁 (PON)
+          퐁 (ポン / 碰)
         </button>
       )}
 
@@ -90,7 +90,7 @@ export const ActionBar: React.FC<ActionBarProps> = ({
           }}
           className="px-4 py-2 rounded-xl font-bold text-sm bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white shadow-md active:scale-95 cursor-pointer"
         >
-          치 (CHI)
+          치 (チー / 吃)
         </button>
       )}
 
@@ -100,7 +100,7 @@ export const ActionBar: React.FC<ActionBarProps> = ({
           onClick={() => onAction('daiminkan')}
           className="px-4 py-2 rounded-xl font-bold text-sm bg-gradient-to-r from-indigo-600 to-blue-700 hover:from-indigo-500 hover:to-blue-600 text-white shadow-md active:scale-95 cursor-pointer"
         >
-          깡 (KAN)
+          깡 (カン / 槓)
         </button>
       )}
 
@@ -110,7 +110,7 @@ export const ActionBar: React.FC<ActionBarProps> = ({
           onClick={() => onAction('pass')}
           className="px-4 py-2 rounded-xl font-bold text-sm bg-slate-800 hover:bg-slate-700 text-slate-300 border border-white/10 active:scale-95 transition-all cursor-pointer"
         >
-          패스 (PASS)
+          패스 (スルー)
         </button>
       )}
     </div>

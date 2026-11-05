@@ -96,7 +96,7 @@ export const ResultModal: React.FC<ResultModalProps> = ({
           )}
           {isRyuukyoku && (
             <h2 className="text-2xl font-black tracking-wide text-slate-300">
-              유국 (流局 - Exhaustive Draw)
+              유국 (流局)
             </h2>
           )}
         </div>
@@ -164,7 +164,7 @@ export const ResultModal: React.FC<ResultModalProps> = ({
 
             {result.is_riichi && (
               <div className="flex items-center gap-1.5">
-                <span className="text-xs font-bold text-rose-400">뒷도라 (Ura):</span>
+                <span className="text-xs font-bold text-rose-400">뒷도라 (裏ドラ):</span>
                 <div className="flex items-center gap-0.5">
                   {[0, 1, 2, 3, 4].map((idx) =>
                     idx < uraMarkers.length ? (
@@ -214,7 +214,7 @@ export const ResultModal: React.FC<ResultModalProps> = ({
           <div className="w-full flex flex-col gap-2 bg-slate-900/60 p-4 rounded-xl border border-white/5 text-sm">
             <span className="text-slate-400 font-medium">텐파이 상태:</span>
             <div className="grid grid-cols-2 gap-2">
-              {['You (나)', 'Mortal 1', 'Mortal 2', 'Mortal 3'].map((pName, sIdx) => (
+              {['나 (自家)', 'Mortal 1', 'Mortal 2', 'Mortal 3'].map((pName, sIdx) => (
                 <div
                   key={sIdx}
                   className={`p-2 rounded font-semibold flex items-center justify-between ${
@@ -224,7 +224,7 @@ export const ResultModal: React.FC<ResultModalProps> = ({
                   }`}
                 >
                   <span>{pName}</span>
-                  <span>{result.tenpai[sIdx] ? '텐파이' : '노텐'}</span>
+                  <span>{result.tenpai[sIdx] ? '텐파이 (聴牌)' : '노텐 (不聴)'}</span>
                 </div>
               ))}
             </div>
@@ -234,7 +234,7 @@ export const ResultModal: React.FC<ResultModalProps> = ({
         {/* Score Delta */}
         {result.score_delta && (
           <div className="w-full grid grid-cols-4 gap-1 text-center text-xs">
-            {['You', 'M1', 'M2', 'M3'].map((name, sIdx) => {
+            {['나 (自家)', 'M1', 'M2', 'M3'].map((name, sIdx) => {
               const delta = result.score_delta[sIdx]
               return (
                 <div key={sIdx} className="p-1.5 rounded bg-black/30">
@@ -259,14 +259,14 @@ export const ResultModal: React.FC<ResultModalProps> = ({
               onClick={onNewGame}
               className="w-full py-3 rounded-xl font-black text-base bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 shadow-lg shadow-amber-500/30 hover:brightness-110 active:scale-98 transition-all cursor-pointer"
             >
-              대국 종료 (최종 결과) - 새 게임 시작
+              대국 종료 (終局) - 새 게임 시작
             </button>
           ) : (
             <button
               onClick={onNextKyoku}
               className="w-full py-3 rounded-xl font-black text-base bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/30 hover:brightness-110 active:scale-98 transition-all cursor-pointer"
             >
-              다음 국 진행 (Next Hand)
+              다음 국 진행 (次局)
             </button>
           )}
         </div>
