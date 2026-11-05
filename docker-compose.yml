@@ -1,0 +1,10 @@
+services:
+  riichi-simulator:
+    build: .
+    container_name: riichi-simulator
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/models:/app/backend/models:ro
+      - ./logs:/app/logs
+    restart: unless-stopped

@@ -1,4 +1,4 @@
-// Convert mjai tile notations (E, S, W, N, P, F, C, 5mr, etc.) to mahgen notations (1z, 2z, ..., 0m, etc.)
+﻿// Convert mjai tile notations (E, S, W, N, P, F, C, 5mr, etc.) to mahgen notations (1z, 2z, ..., 0m, etc.)
 export const MJAI_TO_MAHGEN: Record<string, string> = {
   E: '1z',
   S: '2z',
@@ -41,8 +41,8 @@ export function formatKyoku(bakaze: string, kyoku: number, honba: number): strin
 
 export function formatShanten(shanten: number | null | undefined): string {
   if (shanten === null || shanten === undefined) return ''
-  if (shanten === 0) return '텐파이 (Tenpai)'
-  if (shanten === 1) return '이샹텐 (1-shanten)'
-  if (shanten === 2) return '량샹텐 (2-shanten)'
-  return `${shanten}샹텐`
+  if (shanten === 0) return '텐파이 (聴牌)'
+  if (shanten === 1) return '이샹텐 (一向聴)'
+  if (shanten === 2) return '량샹텐 (二向聴)'
+  return shanten === 3 ? '산샹텐 (三向聴)' : `${shanten}샹텐`
 }

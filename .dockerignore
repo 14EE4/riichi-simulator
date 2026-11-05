@@ -1,0 +1,10 @@
+.git
+.venv
+env
+ENV
+__pycache__
+*.pyc
+frontend/node_modules
+backend/models/mortal.pth
+logs
+*.log

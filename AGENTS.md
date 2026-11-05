@@ -7,31 +7,37 @@
 ## 1. 프로젝트 구조 및 실행 환경
 
 - **프로젝트 위치**: `D:\vscodeworkspace\riichi-simulator`
+- **Python 가상환경 (`.venv`)**:
+  - 루트의 `.venv` 가상환경(`.\.venv\Scripts\python.exe`)을 기본 런타임으로 사용합니다.
+  - `run.bat`가 `.venv` 존재 여부를 확인하여 자동 생성 및 실행하며, Docker 배포를 위한 `Dockerfile` 및 `docker-compose.yml`을 포함합니다.
 - **백엔드 (Python 3.10+ / FastAPI / WebSocket / PyTorch / libriichi)**:
-  - `backend/engine/libriichi/`: Rust 기반 공식 리치마작 엔진 바인딩 (`.pyd`)
-  - `backend/engine/model.py`: Akagi 기반 Mortal ResNet-40 + Dueling DQN 오프라인 신경망 (CUDA 지원)
+  - `backend/engine/libriichi/`: Rust 기반 공식 리치마작 엔진 바인딩 (`.pyd` / `.so`)
+  - `backend/engine/model.py`: Mortal ResNet-40 + Dueling DQN 오프라인 신경망 (CUDA 지원)
   - `backend/engine/mortal_agent.py`: 3명의 Mortal AI 플레이어 래퍼 (단일 모델 가중치 공유)
-  - `backend/engine/dealer.py`: 마작 딜러 상태 머신 (패산 셔플, 배패, 쯔모/타패, 울림 판정, 정산)
-  - `backend/engine/scorer.py`: 공식 일본 마작 역 판정 및 점수 계산 모듈 (`mahjong` 라이브러리)
-  - `backend/models/mortal.pth`: Mortal 신경망 모델 가중치 (~133MB)
+  - `backend/engine/dealer.py`: 비동기 마작 딜러 상태 머신 (패산 셔플, 배패, 쯔모/타패 딜레이, 울림 판정, 정산)
+  - `backend/engine/scorer.py`: 공식 일본 마작 역 판정, 점수 계산 및 리치 가능 타패 계산 모듈 (`mahjong` 라이브러리)
+  - `backend/models/mortal.pth`: 커뮤니티 학습 Mortal 신경망 모델 가중치 (~133MB)
   - `backend/server.py`: FastAPI + WebSocket 실시간 대국 서버 및 정적 프론트엔드 서빙
 - **프론트엔드 (React 19 / Vite / TypeScript / TailwindCSS / mahgen)**:
   - `frontend/src/components/`:
-    - `MahjongTile.tsx`: 고해상도 SVG 마작 타일 렌더러
-    - `PlayerHand.tsx`: 내 손패 인터랙션 (타패 클릭, 샹텐수/대기패/후리텐 표시)
+    - `MahjongTile.tsx`: 고해상도 SVG 마작 타일 렌더러 (`xs`, `sm`, `md`, `lg`)
+    - `PlayerHand.tsx`: 내 손패 인터랙션 (타패 클릭, 리치 가능 타패 하이라이트, 샹텐수/대기패/후리텐 표시)
+    - `OpponentHand.tsx`: 상대 AI 뒷면 손패 (후로 시 장수 자동 차감)
+    - `Melds.tsx`: 4인 좌석별 방향 회전 후로 패 렌더러
     - `River.tsx`: 버림패 하천 (6열 정렬, 리치패 가로 눕힘, 쯔모기리 표시)
-    - `CenterPanel.tsx`: 중앙 정보 (국/본장, 도라, 남은 패산, 4인 점수판)
-    - `ActionBar.tsx`: [치/퐁/깡/리치/론/쯔모/패스] 팝업 인터랙션 바
+    - `CenterPanel.tsx`: 중앙 정보 (5x2 왕패, 국/본장, 남은 패산, 4인 회전 점수판)
+    - `ActionBar.tsx`: [치/퐁/깡/리치/론/쯔모/패스] 플로팅 팝업 인터랙션 바
     - `ResultModal.tsx`: 화료 역/점수 및 유국 결과 정산 모달
   - `frontend/dist/`: 빌드 완료된 정적 에셋 (zero-config 즉시 실행 지원)
-- **실행 스크립트**: `run.bat` (원클릭 로컬 서버 구동 및 브라우저 `http://localhost:8000` 자동 오픈)
+- **실행 스크립트**: `run.bat` (`.venv` 가상환경 자동 감지·구축 및 로컬 서버 구동, 브라우저 `http://localhost:8000` 자동 오픈)
 
 ---
 
 ## 2. 로컬 빌드 및 개발 규칙 (필수)
 
-1. **원클릭 단독 실행 원칙 (`run.bat`)**
-   - 프론트엔드가 이미 `frontend/dist`로 빌드되어 배포되어 있으므로, npm 실행 없이 파이썬 서버 하나(`python backend/server.py`)로 웹 UI와 백엔드가 동시에 구동됩니다.
+1. **가상환경(`.venv`) 및 원클릭 단독 실행 원칙 (`run.bat`)**
+   - 모든 Python 명령 및 테스트는 전역 Python 대신 `.\.venv\Scripts\python.exe`로 실행합니다.
+   - 프론트엔드가 이미 `frontend/dist`로 빌드되어 배포되어 있으므로, `run.bat` 또는 `.\.venv\Scripts\python.exe backend/server.py` 하나로 웹 UI와 백엔드가 동시에 구동됩니다.
 2. **프론트엔드 수정 후 반드시 빌드 갱신**
    - `frontend/src` 내의 UI 코드를 수정했을 때는 반드시 빌드를 다시 수행하여 `frontend/dist`에 반영해야 로컬 파이썬 서버에서 변경사항이 적용됩니다:
      ```powershell
@@ -72,8 +78,9 @@
    - **문서 동기화(Documentation Drift 방지)**:
      - 기능 개발, 룰 추가, UI 변경 완료 시 사용자 보고 전에 `README.md` 및 관련 문서를 반드시 최신화합니다.
      - 커밋 메시지는 `feat:`, `fix:`, `docs:`, `chore:` 접두사를 명확히 구분하여 사용합니다.
-4. **4단계: 사용자 검증 후 PR 생성 및 머지**
-   - **사용자가 직접 테스트하고 승인한 후**에 PR을 생성하여 `dev`에 머지합니다.
+4. **4단계: 사용자 검증 후 PR 생성, 머지 및 이슈 닫기 (`gh issue close` 필수)**
+   - **사용자가 직접 테스트하고 승인한 후**에 PR을 생성하여 `dev`에 머지합니다 (PR 설명에 `Closes #이슈번호` 포함, 이슈 코멘트에 해결 내용 정리).
+   - GitHub 저장소의 기본 브랜치가 `main`일 경우 `dev`로 PR을 머지해도 이슈가 자동으로 닫히지 않으므로, **`dev` 머지 직후 반드시 `gh issue close <이슈번호>`를 실행하여 완료된 이슈를 즉시 닫습니다.**
    - `main` 브랜치는 사용자가 모든 테스트를 마치고 명시적으로 지시할 때만 머지합니다.
 
 ---

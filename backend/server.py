@@ -66,13 +66,14 @@ async def broadcast_state(payload: dict):
     """Send state payload to all connected clients."""
     data_str = json.dumps(payload)
     dead_sockets = set()
-    for ws in connected_websockets:
+    for ws in list(connected_websockets):
         try:
             await ws.send_text(data_str)
         except Exception:
             dead_sockets.add(ws)
     for ws in dead_sockets:
-        connected_websockets.remove(ws)
+        if ws in connected_websockets:
+            connected_websockets.remove(ws)
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -82,17 +83,20 @@ async def websocket_endpoint(websocket: WebSocket):
     logger.info("Client connected via WebSocket")
 
     try:
-        # If no active game, initialize one
+        # If no active game, initialize one with real-time broadcast callback
         if current_session is None:
-            current_session = GameSession()
-            init_res = current_session.start_game()
+            current_session = GameSession(broadcast_callback=broadcast_state)
+            init_res = await current_session.start_game()
             await websocket.send_text(json.dumps(init_res))
         else:
-            # Send current state
+            # Reconnect: sync callback and send current state
+            current_session.broadcast_callback = broadcast_state
             state_payload = {
                 "event": "state_sync",
                 "state": current_session.get_client_state(),
                 "prompt": current_session.waiting_for_user,
+                "result": getattr(current_session, "last_result", None),
+                "game_over": current_session.game_over,
             }
             await websocket.send_text(json.dumps(state_payload))
 
@@ -103,18 +107,18 @@ async def websocket_endpoint(websocket: WebSocket):
             data = msg.get("data", {})
 
             if action == "start_game":
-                current_session = GameSession()
-                res = current_session.start_game()
+                current_session = GameSession(broadcast_callback=broadcast_state)
+                res = await current_session.start_game()
                 await broadcast_state(res)
 
             elif action == "next_kyoku":
                 if current_session:
-                    res = current_session.start_next_kyoku()
+                    res = await current_session.start_next_kyoku()
                     await broadcast_state(res)
 
             elif action in ("discard", "tsumo_agari", "ron_agari", "pon", "chi", "pass"):
                 if current_session:
-                    res = current_session.handle_user_response(action, data)
+                    res = await current_session.handle_user_response(action, data)
                     await broadcast_state(res)
 
     except WebSocketDisconnect:
@@ -131,18 +135,14 @@ if frontend_dist.is_dir():
     app.mount("/assets", StaticFiles(directory=str(frontend_dist / "assets")), name="assets")
 
     @app.get("/{full_path:path}")
-    async def serve_frontend(full_path: str):
+    async def serve_spa(full_path: str):
         file_path = frontend_dist / full_path
         if file_path.is_file():
-            return FileResponse(file_path)
-        return FileResponse(frontend_dist / "index.html")
-
-def main():
-    import uvicorn
-    port = 8000
-    logger.info(f"Starting Riichi Mahjong Simulator on http://localhost:{port}")
-    webbrowser.open(f"http://localhost:{port}")
-    uvicorn.run(app, host="127.0.0.1", port=port, log_level="info")
+            return FileResponse(str(file_path))
+        return FileResponse(str(frontend_dist / "index.html"))
 
 if __name__ == "__main__":
-    main()
+    import uvicorn
+    logger.info("Starting Riichi Mahjong Simulator on http://localhost:8000")
+    webbrowser.open("http://localhost:8000")
+    uvicorn.run(app, host="0.0.0.0", port=8000)
