@@ -7,7 +7,15 @@ import { Melds, MeldItem } from './components/Melds'
 import { MahjongTile } from './components/MahjongTile'
 import { ActionBar, PromptAction } from './components/ActionBar'
 import { ResultModal } from './components/ResultModal'
-import { Wifi, WifiOff, RotateCcw } from 'lucide-react'
+import { Wifi, WifiOff, RotateCcw, Volume2, VolumeX } from 'lucide-react'
+import {
+  playSound,
+  unlockAudio,
+  isMuted,
+  setMuted as setSoundMuted,
+  getVolume,
+  setVolume as setSoundVolume,
+} from './utils/sound'
 
 interface GameState {
   names: string[]
@@ -47,7 +55,46 @@ export function App() {
     yakuLevel?: string
   } | null>(null)
 
+  const [soundMuted, setSoundMutedState] = useState(isMuted())
+  const [soundVolume, setSoundVolumeState] = useState(getVolume())
+
   const socketRef = useRef<WebSocket | null>(null)
+  const prevCounts = useRef({ discards: 0, melds: 0, riichi: 0 })
+
+  useEffect(() => {
+    const unlock = () => unlockAudio()
+    window.addEventListener('pointerdown', unlock)
+    window.addEventListener('keydown', unlock)
+    return () => {
+      window.removeEventListener('pointerdown', unlock)
+      window.removeEventListener('keydown', unlock)
+    }
+  }, [])
+
+  // 상태 변화로 효과음 재생: 타패 / 후로 / 리치
+  useEffect(() => {
+    if (!gameState) return
+    const discards = gameState.discards.reduce((n, d) => n + d.length, 0)
+    const melds = gameState.melds.reduce((n, m) => n + m.length, 0)
+    const riichi = gameState.riichi_declared.filter(Boolean).length
+    const prev = prevCounts.current
+    if (riichi > prev.riichi) playSound('riichi')
+    else if (melds > prev.melds) playSound('call')
+    else if (discards > prev.discards) playSound('discard')
+    prevCounts.current = { discards, melds, riichi }
+  }, [gameState])
+
+  const toggleMute = () => {
+    const next = !soundMuted
+    setSoundMuted(next)
+    setSoundMutedState(next)
+    if (!next) playSound('discard')
+  }
+
+  const changeVolume = (v: number) => {
+    setSoundVolume(v)
+    setSoundVolumeState(v)
+  }
 
   const connectWebSocket = () => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
@@ -91,6 +138,7 @@ export function App() {
               yakuLevel = '만관 (満貫)'
           }
 
+          playSound(yakuLevel ? 'bigHora' : 'hora')
           setHoraAnnouncement({
             actor: data.result.actor,
             isTsumo: data.result.is_tsumo,
@@ -104,6 +152,7 @@ export function App() {
             setRoundResult(data.result)
           }, 2000)
         } else if (data.event === 'ryuukyoku') {
+          playSound('ryuukyoku')
           setRoundResult(data.result)
         }
       } catch (err) {
@@ -181,6 +230,27 @@ export function App() {
             <RotateCcw className="w-3 h-3" />
             새 게임
           </button>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={toggleMute}
+              title={soundMuted ? '소리 켜기' : '소리 끄기'}
+              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10 active:scale-95 transition-all cursor-pointer"
+            >
+              {soundMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+            </button>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={soundVolume}
+              onChange={(e) => changeVolume(Number(e.target.value))}
+              disabled={soundMuted}
+              title="볼륨"
+              className="w-20 accent-amber-400 cursor-pointer disabled:opacity-40"
+            />
+          </div>
 
           <div className="flex items-center gap-1.5 text-xs text-slate-400">
             {connected ? (
