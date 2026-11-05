@@ -4,6 +4,7 @@ import { CenterPanel } from './components/CenterPanel'
 import { PlayerHand } from './components/PlayerHand'
 import { OpponentHand } from './components/OpponentHand'
 import { Melds, MeldItem } from './components/Melds'
+import { MahjongTile } from './components/MahjongTile'
 import { ActionBar, PromptAction } from './components/ActionBar'
 import { ResultModal } from './components/ResultModal'
 import { Wifi, WifiOff, RotateCcw } from 'lucide-react'
@@ -163,6 +164,23 @@ export function App() {
 
       {/* Main Mahjong Mat (Table) */}
       <main className="relative flex-1 flex flex-col items-center justify-between px-2 py-1 overflow-hidden">
+        {/* Top-Left Corner: 5 Dora Indicator Tiles (Wanpai top row) */}
+        {gameState && (
+          <div className="absolute top-2.5 left-4 z-20 flex flex-col gap-1 px-2.5 py-1.5 rounded-xl bg-slate-950/85 border border-amber-500/30 shadow-lg backdrop-blur-md">
+            <span className="text-[10px] font-bold text-amber-400 tracking-wider">도라 표시패 (DORA)</span>
+            <div className="flex items-center gap-1">
+              {[0, 1, 2, 3, 4].map((idx) => {
+                const isOpen = idx < (gameState.dora_markers?.length || 0)
+                return isOpen ? (
+                  <MahjongTile key={`tl-dora-${idx}`} tile={gameState.dora_markers[idx]} size="sm" />
+                ) : (
+                  <MahjongTile key={`tl-dora-${idx}`} tile="1m" faceDown={true} size="sm" />
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Top: Mortal 2 (Toimen - North) */}
         <div className="flex flex-col items-center gap-1 shrink-0">
           <div className="flex items-center gap-2">
@@ -175,7 +193,6 @@ export function App() {
         {/* Middle Row: Left (Kamicha) | CenterPanel | Right (Shimocha) */}
         <div className="flex w-full items-center justify-between px-4 max-w-7xl shrink-0 my-auto">
           {/* Left: Mortal 3 (Kamicha - West) */}
-          {/* Outer column holds hand + melds; inner column holds rotated river with explicit bounding box */}
           <div className="flex items-center gap-3">
             <div className="flex flex-col items-center justify-center gap-2 shrink-0">
               <OpponentHand tileCount={getClosedTileCount(3)} vertical={true} />
@@ -186,7 +203,7 @@ export function App() {
             </div>
           </div>
 
-          {/* Center Info Panel with Authentic Wanpai 10-tile dead wall */}
+          {/* Center Info Panel */}
           {gameState && (
             <CenterPanel
               bakaze={gameState.bakaze}
@@ -194,7 +211,6 @@ export function App() {
               honba={gameState.honba}
               kyotaku={gameState.kyotaku}
               oya={gameState.oya}
-              doraMarkers={gameState.dora_markers}
               tilesLeft={gameState.tiles_left}
               scores={gameState.scores}
               names={gameState.names}
@@ -204,7 +220,6 @@ export function App() {
           )}
 
           {/* Right: Mortal 1 (Shimocha - East) */}
-          {/* Inner column holds rotated river with explicit bounding box; outer column holds melds + hand */}
           <div className="flex items-center gap-3">
             <div className="w-[125px] h-[195px] flex items-center justify-center shrink-0">
               <River discards={gameState?.discards?.[1] || []} className="-rotate-90 origin-center" />

@@ -1,5 +1,4 @@
 import React from 'react'
-import { MahjongTile } from './MahjongTile'
 import { formatKyoku } from '../utils/tiles'
 
 interface CenterPanelProps {
@@ -8,7 +7,6 @@ interface CenterPanelProps {
   honba: number
   kyotaku: number
   oya: number
-  doraMarkers: string[]
   tilesLeft: number
   scores: number[]
   names: string[]
@@ -24,7 +22,6 @@ export const CenterPanel: React.FC<CenterPanelProps> = ({
   honba,
   kyotaku,
   oya,
-  doraMarkers,
   tilesLeft,
   scores,
   names,
@@ -32,7 +29,7 @@ export const CenterPanel: React.FC<CenterPanelProps> = ({
   riichiDeclared,
 }) => {
   return (
-    <div className="relative flex items-center justify-center w-64 h-64 rounded-2xl bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 border-2 border-amber-500/40 shadow-2xl backdrop-blur-md select-none shrink-0">
+    <div className="relative flex items-center justify-center w-60 h-60 rounded-2xl bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 border-2 border-amber-500/40 shadow-2xl backdrop-blur-md select-none shrink-0">
       {/* Top Seat: Toimen (Seat 2 - North) [Rotated 180deg facing North player] */}
       <div className="absolute top-2 inset-x-8 flex justify-center rotate-180 origin-center z-20">
         <div
@@ -77,47 +74,20 @@ export const CenterPanel: React.FC<CenterPanelProps> = ({
         </div>
       </div>
 
-      {/* Center Core Display: Round, Honba, Authentic Wanpai (Dead Wall 10 tiles), Tiles Left */}
-      <div className="flex flex-col items-center justify-center gap-1 p-2 rounded-xl bg-black/75 border border-amber-500/30 shadow-inner z-10 w-40 h-38">
+      {/* Center Core Display: Round, Honba, Tiles Left, Riichi Sticks */}
+      <div className="flex flex-col items-center justify-center gap-2 p-3 rounded-xl bg-black/75 border border-amber-500/30 shadow-inner z-10 w-36 h-28">
         {/* Round Name */}
-        <div className="text-[11px] font-black tracking-wider text-amber-400">
+        <div className="text-sm font-black tracking-wider text-amber-400">
           {formatKyoku(bakaze, kyoku, honba)}
         </div>
 
-        {/* Authentic Wanpai (Dead Wall): 2 rows of 5 tiles */}
-        <div className="flex flex-col items-center gap-0.5 bg-slate-950/90 px-1.5 py-1 rounded-md border border-white/10 shadow-xs">
-          <div className="flex items-center justify-between w-full px-0.5">
-            <span className="text-[8px] text-amber-400 font-bold tracking-wider">王牌 (도라)</span>
-            <span className="text-[8px] text-slate-500 font-mono">5×2</span>
-          </div>
-
-          {/* Top Row: 5 Dora Indicators (1st revealed initially, rest on Kan) */}
-          <div className="flex items-center gap-0.5">
-            {[0, 1, 2, 3, 4].map((idx) => {
-              const isOpen = idx < doraMarkers.length
-              return isOpen ? (
-                <MahjongTile key={`dora-${idx}`} tile={doraMarkers[idx]} size="xs" />
-              ) : (
-                <MahjongTile key={`dora-${idx}`} tile="1m" faceDown={true} size="xs" />
-              )
-            })}
-          </div>
-
-          {/* Bottom Row: 5 Ura-dora (All face down) */}
-          <div className="flex items-center gap-0.5">
-            {[0, 1, 2, 3, 4].map((idx) => (
-              <MahjongTile key={`ura-${idx}`} tile="1m" faceDown={true} size="xs" />
-            ))}
-          </div>
-        </div>
-
         {/* Tiles Left & Riichi Sticks */}
-        <div className="flex items-center gap-2 text-[11px] font-mono font-bold text-slate-300">
-          <span>남은패: <b className="text-emerald-400">{tilesLeft}</b></span>
+        <div className="flex flex-col items-center gap-1 text-xs font-mono font-bold text-slate-300">
+          <span>남은패: <b className="text-emerald-400 text-sm">{tilesLeft}</b></span>
           {kyotaku > 0 && (
             <span className="flex items-center text-red-400" title={`리치봉 공탁 ${kyotaku}개`}>
               <span className="inline-block w-2 h-2 rounded-full bg-red-500 mr-1 shadow-xs" />
-              {kyotaku}
+              공탁 {kyotaku}
             </span>
           )}
         </div>

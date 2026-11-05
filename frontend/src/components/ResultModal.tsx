@@ -20,10 +20,12 @@ export const ResultModal: React.FC<ResultModalProps> = ({
 
   const isHora = result.type === 'hora'
   const isRyuukyoku = result.type === 'ryuukyoku'
+  const doraMarkers: string[] = Array.isArray(result.dora_markers) ? result.dora_markers : []
+  const uraMarkers: string[] = Array.isArray(result.ura_markers) ? result.ura_markers : []
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="w-[500px] max-w-[90vw] rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-amber-500/50 p-6 shadow-2xl flex flex-col items-center gap-4">
+      <div className="w-[520px] max-w-[92vw] rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-amber-500/50 p-6 shadow-2xl flex flex-col items-center gap-4">
         {/* Title Header */}
         <div className="text-center">
           {isHora && (
@@ -44,6 +46,39 @@ export const ResultModal: React.FC<ResultModalProps> = ({
             {result.winner_hand.map((tile: string, idx: number) => (
               <MahjongTile key={idx} tile={tile} size="md" />
             ))}
+          </div>
+        )}
+
+        {/* Dora & Ura-Dora (shown only on Riichi win) */}
+        {isHora && (
+          <div className="flex flex-wrap items-center justify-center gap-4 px-3 py-2 bg-slate-950/70 rounded-xl border border-white/10">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-amber-400">도라 표시패:</span>
+              <div className="flex items-center gap-0.5">
+                {[0, 1, 2, 3, 4].map((idx) =>
+                  idx < doraMarkers.length ? (
+                    <MahjongTile key={`res-dora-${idx}`} tile={doraMarkers[idx]} size="xs" />
+                  ) : (
+                    <MahjongTile key={`res-dora-${idx}`} tile="1m" faceDown={true} size="xs" />
+                  )
+                )}
+              </div>
+            </div>
+
+            {result.is_riichi && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-rose-400">뒷도라 (Ura):</span>
+                <div className="flex items-center gap-0.5">
+                  {[0, 1, 2, 3, 4].map((idx) =>
+                    idx < uraMarkers.length ? (
+                      <MahjongTile key={`res-ura-${idx}`} tile={uraMarkers[idx]} size="xs" />
+                    ) : (
+                      <MahjongTile key={`res-ura-${idx}`} tile="1m" faceDown={true} size="xs" />
+                    )
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
