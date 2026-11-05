@@ -38,6 +38,13 @@ export function App() {
   const [selectedTile, setSelectedTile] = useState<string | null>(null)
   const [isReachMode, setIsReachMode] = useState(false)
   const [roundResult, setRoundResult] = useState<any | null>(null)
+  const [horaAnnouncement, setHoraAnnouncement] = useState<{
+    actor: number
+    isTsumo: boolean
+    winnerName: string
+    pai: string
+    hand: string[]
+  } | null>(null)
 
   const socketRef = useRef<WebSocket | null>(null)
 
@@ -67,7 +74,19 @@ export function App() {
           setPrompt(null)
         }
 
-        if (data.event === 'hora' || data.event === 'ryuukyoku') {
+        if (data.event === 'hora') {
+          setHoraAnnouncement({
+            actor: data.result.actor,
+            isTsumo: data.result.is_tsumo,
+            winnerName: data.result.winner_name,
+            pai: data.result.pai,
+            hand: data.result.winner_hand,
+          })
+          setTimeout(() => {
+            setHoraAnnouncement(null)
+            setRoundResult(data.result)
+          }, 2000)
+        } else if (data.event === 'ryuukyoku') {
           setRoundResult(data.result)
         }
       } catch (err) {
@@ -184,7 +203,11 @@ export function App() {
         {/* Left Side: Mortal 3 (Kamicha - West) anchored on the left without stretching vertical center column */}
         <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-4 z-10">
           <div className="flex flex-col items-center justify-center gap-2 shrink-0">
-            <OpponentHand tileCount={getClosedTileCount(3)} vertical={true} />
+            <OpponentHand
+              tileCount={getClosedTileCount(3)}
+              vertical={true}
+              openTiles={horaAnnouncement?.actor === 3 ? horaAnnouncement.hand : undefined}
+            />
             <Melds melds={gameState?.melds?.[3] || []} orientation="left" />
           </div>
           <div className="w-[155px] h-[240px] flex items-center justify-center shrink-0">
@@ -199,7 +222,11 @@ export function App() {
           </div>
           <div className="flex flex-col items-center justify-center gap-2 shrink-0">
             <Melds melds={gameState?.melds?.[1] || []} orientation="right" />
-            <OpponentHand tileCount={getClosedTileCount(1)} vertical={true} />
+            <OpponentHand
+              tileCount={getClosedTileCount(1)}
+              vertical={true}
+              openTiles={horaAnnouncement?.actor === 1 ? horaAnnouncement.hand : undefined}
+            />
           </div>
         </div>
 
@@ -207,7 +234,10 @@ export function App() {
         <div className="flex flex-col items-center gap-1 shrink-0">
           <div className="flex items-center gap-2">
             <Melds melds={gameState?.melds?.[2] || []} orientation="top" />
-            <OpponentHand tileCount={getClosedTileCount(2)} />
+            <OpponentHand
+              tileCount={getClosedTileCount(2)}
+              openTiles={horaAnnouncement?.actor === 2 ? horaAnnouncement.hand : undefined}
+            />
           </div>
           <River discards={gameState?.discards?.[2] || []} className="rotate-180 origin-center" />
         </div>
@@ -269,6 +299,35 @@ export function App() {
           )}
         </div>
       </main>
+
+      {/* Dramatic Hora Cut-in Banner (Ron / Tsumo) */}
+      {horaAnnouncement && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none select-none animate-in fade-in zoom-in duration-300">
+          <div className="flex flex-col items-center gap-3 px-12 py-7 rounded-3xl bg-slate-950/90 border-4 border-amber-400 shadow-[0_0_50px_rgba(245,158,11,0.5)] backdrop-blur-xl ring-4 ring-amber-500/30">
+            <div
+              className={`text-6xl font-black tracking-widest ${
+                horaAnnouncement.isTsumo
+                  ? 'text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 drop-shadow-[0_4px_16px_rgba(245,158,11,0.8)]'
+                  : 'text-transparent bg-clip-text bg-gradient-to-r from-rose-400 via-red-500 to-rose-600 drop-shadow-[0_4px_16px_rgba(244,63,94,0.8)]'
+              }`}
+            >
+              {horaAnnouncement.isTsumo ? '쯔모 (TSUMO) !' : '론 (RON) !'}
+            </div>
+            <div className="text-xl font-bold text-slate-200">
+              <span className="text-amber-400 font-black text-2xl mr-1">
+                {horaAnnouncement.winnerName}
+              </span>{' '}
+              화료!
+            </div>
+            <div className="flex items-center gap-3 mt-1 bg-black/50 px-4 py-1.5 rounded-xl border border-white/10">
+              <span className="text-xs font-bold text-slate-400">화료패:</span>
+              <div className="ring-2 ring-amber-400 rounded-md shadow-md">
+                <MahjongTile tile={horaAnnouncement.pai} size="sm" />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Result Modal (Hora / Ryuukyoku) */}
       <ResultModal
