@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { MahjongTile } from './MahjongTile'
 import { formatShanten } from '../utils/tiles'
 
@@ -77,7 +77,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
 
         {furiten && (
           <span className="px-1.5 py-0.2 rounded bg-red-600/90 text-white font-bold text-[10px]">
-            후리텐 (Furiten)
+            후리텐 (振聴)
           </span>
         )}
       </div>
