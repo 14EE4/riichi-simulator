@@ -13,6 +13,22 @@ interface MahjongTileProps {
   highlight?: boolean
 }
 
+// Exact pixel dimensions matching mahgen's natural 70x100 and 92x77 aspect ratios
+const TILE_DIMS = {
+  sm: {
+    portrait: { w: 24, h: 34 },
+    horizontal: { w: 34, h: 28 },
+  },
+  md: {
+    portrait: { w: 32, h: 46 },
+    horizontal: { w: 44, h: 36 },
+  },
+  lg: {
+    portrait: { w: 44, h: 62 },
+    horizontal: { w: 58, h: 48 },
+  },
+}
+
 export const MahjongTile: React.FC<MahjongTileProps> = ({
   tile,
   horizontal = false,
@@ -23,46 +39,89 @@ export const MahjongTile: React.FC<MahjongTileProps> = ({
   size = 'md',
   highlight = false,
 }) => {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const mahgenSeq = toMahgen(tile)
+  const mgRef = useRef<HTMLElement>(null)
+  const dims = horizontal ? TILE_DIMS[size].horizontal : TILE_DIMS[size].portrait
 
-  const sizeClasses = {
-    sm: horizontal ? 'w-8 h-6' : 'w-6 h-8',
-    md: horizontal ? 'w-11 h-8' : 'w-8 h-11',
-    lg: horizontal ? 'w-14 h-10' : 'w-10 h-14',
-  }
+  // Prepend '_' if horizontal for native mahgen rotated rendering
+  const baseSeq = toMahgen(tile)
+  const mahgenSeq = horizontal ? `_${baseSeq}` : baseSeq
+
+  // Penetrate open shadowRoot to enforce exact pixel dimensions on the inner <img>
+  useEffect(() => {
+    if (faceDown) return
+
+    let cancelled = false
+    let retryCount = 0
+
+    const applyInnerImgStyles = () => {
+      if (cancelled) return
+      const mg = mgRef.current
+      if (!mg) return
+
+      const img = mg.shadowRoot?.querySelector('img') as HTMLImageElement | null
+      if (!img) {
+        if (retryCount < 20) {
+          retryCount++
+          requestAnimationFrame(applyInnerImgStyles)
+        }
+        return
+      }
+
+      // Set explicit dimensions on host and inner image
+      mg.style.width = `${dims.w}px`
+      mg.style.height = `${dims.h}px`
+      mg.style.display = 'inline-block'
+
+      img.style.width = `${dims.w}px`
+      img.style.height = `${dims.h}px`
+      img.style.display = 'block'
+      img.style.objectFit = 'contain'
+
+      // Also listen to async load event
+      img.onload = () => {
+        if (!cancelled) {
+          img.style.width = `${dims.w}px`
+          img.style.height = `${dims.h}px`
+        }
+      }
+    }
+
+    applyInnerImgStyles()
+
+    return () => {
+      cancelled = true
+    }
+  }, [mahgenSeq, dims.w, dims.h, faceDown])
 
   if (faceDown) {
     return (
       <div
-        className={`inline-flex items-center justify-center rounded-sm border border-amber-900/60 bg-gradient-to-br from-amber-700 via-amber-800 to-amber-950 shadow-md ${
-          sizeClasses[size]
-        } ${horizontal ? 'rotate-90' : ''}`}
+        style={{ width: `${dims.w}px`, height: `${dims.h}px` }}
+        className="inline-flex items-center justify-center rounded-xs border border-amber-950/80 bg-gradient-to-br from-amber-700 via-amber-800 to-amber-950 shadow-sm shrink-0"
       >
-        <div className="h-4/5 w-4/5 rounded-xs border border-amber-500/30 bg-amber-900/50" />
+        <div className="h-4/5 w-4/5 rounded-2xs border border-amber-500/20 bg-amber-900/60" />
       </div>
     )
   }
 
   return (
     <div
-      ref={containerRef}
+      style={{ width: `${dims.w}px`, height: `${dims.h}px` }}
       onClick={!disabled ? onClick : undefined}
-      className={`relative inline-flex select-none items-center justify-center rounded-sm transition-all duration-150 ${
-        sizeClasses[size]
-      } ${
+      className={`relative inline-flex select-none items-center justify-center shrink-0 transition-transform duration-100 ${
         onClick && !disabled
-          ? 'cursor-pointer hover:-translate-y-2 hover:shadow-xl hover:ring-2 hover:ring-amber-400'
+          ? 'cursor-pointer hover:-translate-y-2 hover:drop-shadow-lg'
           : ''
-      } ${selected ? '-translate-y-2 ring-2 ring-amber-400 shadow-xl' : ''} ${
-        highlight ? 'ring-2 ring-emerald-400 ring-offset-1 ring-offset-slate-900 shadow-lg' : ''
-      } ${disabled ? 'opacity-75 cursor-not-allowed' : ''} ${
-        horizontal ? 'rotate-90 origin-center my-1' : ''
-      }`}
+      } ${selected ? '-translate-y-2 drop-shadow-xl' : ''} ${
+        highlight ? 'ring-2 ring-emerald-400 rounded-xs' : ''
+      } ${disabled ? 'opacity-70 cursor-not-allowed' : ''}`}
     >
-      <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-sm bg-[#faf8f5] shadow-md border-b-2 border-r border-[#d4cbbe]">
-        <mah-gen data-seq={mahgenSeq} className="h-full w-full flex items-center justify-center pointer-events-none" />
-      </div>
+      <mah-gen
+        ref={mgRef}
+        data-seq={mahgenSeq}
+        style={{ width: `${dims.w}px`, height: `${dims.h}px` }}
+        className="pointer-events-none drop-shadow-sm"
+      />
     </div>
   )
 }

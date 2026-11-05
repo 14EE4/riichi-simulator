@@ -57,9 +57,9 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       </div>
 
       {/* Tiles Container */}
-      <div className="flex items-end gap-1 p-2 rounded-xl bg-slate-950/60 border border-white/10 shadow-2xl backdrop-blur-md">
+      <div className="flex items-end gap-0.5 px-3 py-2 rounded-xl bg-slate-950/70 border border-white/10 shadow-2xl backdrop-blur-md">
         {/* Main 13 tiles */}
-        <div className="flex items-end gap-1">
+        <div className="flex items-end gap-0.5">
           {mainHand.map((tile, idx) => (
             <MahjongTile
               key={idx}
@@ -75,7 +75,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
 
         {/* Drawn tile with slight gap */}
         {drawnTile && (
-          <div className="ml-3 border-l border-white/10 pl-3 flex items-end">
+          <div className="ml-3 pl-2 flex items-end">
             <MahjongTile
               tile={drawnTile}
               size="lg"

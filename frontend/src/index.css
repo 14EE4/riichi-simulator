@@ -7,15 +7,10 @@
   }
 }
 
-/* Custom tile styling */
+/* Base custom element reset */
 mah-gen {
   display: inline-block;
   line-height: 0;
   vertical-align: middle;
-}
-
-mah-gen svg {
-  display: inline-block;
-  height: 100%;
-  width: auto;
+  overflow: hidden;
 }
