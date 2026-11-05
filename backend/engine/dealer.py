@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 import asyncio
 import random
 import json
@@ -65,8 +65,8 @@ def sort_tiles(tiles: List[str]) -> List[str]:
     def key(t: str):
         if t in jihai_order:
             return (3, jihai_order[t], 0)
-        suit = t[-1]
         norm = normalize_tile(t)
+        suit = norm[-1]
         num = int(norm[0])
         is_aka = 1 if t.endswith("r") or t.startswith("0") else 0
         return (suit_order.get(suit, 4), num, is_aka)
@@ -427,8 +427,9 @@ class GameSession:
                 if human_cand.can_chi and 0 == (actor + 1) % 4:
                     actions.append("chi")
                     options["chi_patterns"] = []
-                    num = int(tile[0]) if tile[0] != "0" else 5
-                    suit = tile[-1]
+                    norm_tile = normalize_tile(tile)
+                    num = int(norm_tile[0])
+                    suit = norm_tile[-1]
                     if suit in ("m", "p", "s"):
                         hand_norms = [normalize_tile(t) for t in self.hands[0]]
                         for p1_n, p2_n in [(num-2, num-1), (num-1, num+1), (num+1, num+2)]:
