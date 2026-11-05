@@ -98,7 +98,7 @@ export const ResultModal: React.FC<ResultModalProps> = ({
                         key={`wmt-${mIdx}-${tIdx}`}
                         tile={t}
                         size="xs"
-                        rotated={tIdx === meld.rot_idx}
+                        horizontal={tIdx === meld.rot_idx}
                       />
                     ))}
                   </div>
