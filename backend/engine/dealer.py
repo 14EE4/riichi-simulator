@@ -9,7 +9,17 @@ _libriichi_loader.load()
 
 from libriichi.state import PlayerState, ActionCandidate
 from mortal_agent import MortalAgent, create_mortal_agents
-from scorer import MahjongScorer
+from scorer import MahjongScorer, INDEX_TO_MJAI
+
+def parse_waits_mask(waits_mask: Any) -> List[str]:
+    """Convert libriichi 34-element boolean waits mask to mjai tile strings."""
+    if not waits_mask:
+        return []
+    res = []
+    for idx, is_wait in enumerate(waits_mask):
+        if is_wait and idx < len(INDEX_TO_MJAI):
+            res.append(INDEX_TO_MJAI[idx])
+    return res
 
 logger = logging.getLogger(__name__)
 
@@ -93,13 +103,14 @@ class GameSession:
         # Pending human prompt if waiting for user input
         self.waiting_for_user: Optional[Dict[str, Any]] = None
 
-    def dispatch_public_event(self, event: Dict[str, Any]):
+    def dispatch_public_event(self, event: Dict[str, Any], skip_agent: Optional[int] = None):
         """Broadcast an event visible to all players identically."""
         line = json.dumps(event)
         for i in range(4):
             self.player_states[i].update(line)
         for seat, agent in self.mortal_agents.items():
-            agent.react(line, can_act=False)
+            if seat != skip_agent:
+                agent.react(line, can_act=False)
 
     def start_game(self):
         """Initialize the entire game session."""
@@ -195,9 +206,11 @@ class GameSession:
         self.current_turn = actor
 
         # Dispatch tsumo event: visible tile only to actor, "?" to opponents
+        exact_tsumo = {"type": "tsumo", "actor": actor, "pai": drawn}
+        hidden_tsumo = {"type": "tsumo", "actor": actor, "pai": "?"}
+
         for seat in range(4):
-            pai_str = drawn if seat == actor else "?"
-            ev = {"type": "tsumo", "actor": actor, "pai": pai_str}
+            ev = exact_tsumo if seat == actor else hidden_tsumo
             line = json.dumps(ev)
             if seat == actor:
                 cand = self.player_states[actor].update(line)
@@ -224,7 +237,7 @@ class GameSession:
                 "actions": actions,
                 "tsumo": drawn,
                 "shanten": self.player_states[0].shanten,
-                "waits": self.player_states[0].waits,
+                "waits": parse_waits_mask(self.player_states[0].waits),
                 "at_furiten": self.player_states[0].at_furiten,
             }
             return {
@@ -288,117 +301,101 @@ class GameSession:
             "pai": tile,
             "tsumogiri": tsumogiri,
         }
-        self.dispatch_public_event(dahai_event)
+        line = json.dumps(dahai_event)
 
-        # Check for reaction candidates from the other 3 players
-        call_candidates = self.check_reactions(actor, tile)
-        if call_candidates:
-            # If human can call, yield prompt to human
-            if 0 in call_candidates:
-                human_cand = call_candidates[0]
+        # 1. Update all 4 player_states exactly once
+        cands: Dict[int, ActionCandidate] = {}
+        for seat in range(4):
+            cand = self.player_states[seat].update(line)
+            if seat != actor:
+                cands[seat] = cand
+
+        # 2. Update the discarder bot without reacting
+        if actor in self.mortal_agents:
+            self.mortal_agents[actor].react(line, can_act=False)
+
+        # 3. Check if human player (seat 0) can react
+        if 0 in cands and cands[0].can_act:
+            human_cand = cands[0]
+            actions = []
+            options = {}
+            if human_cand.can_ron_agari:
+                actions.append("ron_agari")
+            if human_cand.can_pon:
+                actions.append("pon")
+            if human_cand.can_daiminkan:
+                actions.append("daiminkan")
+            if human_cand.can_chi and 0 == (actor + 1) % 4:
+                actions.append("chi")
+                options["chi_patterns"] = []
+                num = int(tile[0]) if tile[0] != "0" else 5
+                suit = tile[-1]
+                if suit in ("m", "p", "s"):
+                    hand_norms = [normalize_tile(t) for t in self.hands[0]]
+                    for p1_n, p2_n in [(num-2, num-1), (num-1, num+1), (num+1, num+2)]:
+                        t1, t2 = f"{p1_n}{suit}", f"{p2_n}{suit}"
+                        if t1 in hand_norms and t2 in hand_norms:
+                            options["chi_patterns"].append([t1, t2])
+
+            if actions:
                 self.waiting_for_user = {
                     "type": "call_action",
                     "actor": 0,
                     "target_actor": actor,
                     "target_tile": tile,
-                    "actions": human_cand["actions"],
-                    "options": human_cand.get("options", {}),
+                    "actions": actions,
+                    "options": options,
                 }
                 return {
                     "event": "user_call_required",
                     "state": self.get_client_state(),
                     "prompt": self.waiting_for_user,
                 }
-            else:
-                # Resolve AI calls (order: Ron > Pon/Kan > Chi)
-                return self.resolve_ai_calls(call_candidates, actor, tile)
 
-        # No calls made, advance to next player
-        next_actor = (actor + 1) % 4
-        return self.draw_tile(next_actor)
+        # 4. Human cannot call; query AI players exactly once
+        return self.resolve_ai_reactions(actor, tile, cands)
 
-    def check_reactions(self, discarder: int, tile: str) -> Dict[int, Dict[str, Any]]:
-        """Check if any other player wants to call (Ron, Chi, Pon, Kan)."""
-        candidates: Dict[int, Dict[str, Any]] = {}
-
-        for seat in range(4):
-            if seat == discarder:
-                continue
-
-            cand: ActionCandidate = self.player_states[seat].update(
-                json.dumps({"type": "dahai", "actor": discarder, "pai": tile, "tsumogiri": False})
-            )
-
-            actions = []
-            options = {}
-
-            if cand.can_ron_agari:
-                actions.append("ron_agari")
-            if cand.can_pon:
-                actions.append("pon")
-            if cand.can_daiminkan:
-                actions.append("daiminkan")
-            if cand.can_chi and seat == (discarder + 1) % 4:
-                actions.append("chi")
-                options["chi_patterns"] = []
-                # Find valid chi tile pairs in hand
-                num = int(tile[0]) if tile[0] != "0" else 5
-                suit = tile[-1]
-                if suit in ("m", "p", "s"):
-                    # Check low, mid, high
-                    hand_norms = [normalize_tile(t) for t in self.hands[seat]]
-                    p1, p2 = f"{num-2}{suit}", f"{num-1}{suit}"
-                    if p1 in hand_norms and p2 in hand_norms:
-                        options["chi_patterns"].append([p1, p2])
-                    p1, p2 = f"{num-1}{suit}", f"{num+1}{suit}"
-                    if p1 in hand_norms and p2 in hand_norms:
-                        options["chi_patterns"].append([p1, p2])
-                    p1, p2 = f"{num+1}{suit}", f"{num+2}{suit}"
-                    if p1 in hand_norms and p2 in hand_norms:
-                        options["chi_patterns"].append([p1, p2])
-
-            if actions:
-                candidates[seat] = {"actions": actions, "options": options}
-
-        return candidates
-
-    def resolve_ai_calls(
+    def resolve_ai_reactions(
         self,
-        call_candidates: Dict[int, Dict[str, Any]],
         discarder: int,
         tile: str,
+        cands: Dict[int, ActionCandidate],
     ) -> Dict[str, Any]:
-        """Ask AI agents if they wish to act on the discard."""
-        dahai_event = {"type": "dahai", "actor": discarder, "pai": tile, "tsumogiri": False}
+        """Collect reactions from AI agents on the discard (exactly 1 call per bot)."""
+        dahai_line = json.dumps({"type": "dahai", "actor": discarder, "pai": tile, "tsumogiri": False})
+        ai_responses = {}
 
-        # 1. Check for Ron
-        for seat in sorted(call_candidates.keys()):
-            if seat == 0:
+        for seat in sorted(self.mortal_agents.keys()):
+            if seat == discarder:
                 continue
-            resp = self.mortal_agents[seat].react(dahai_event, can_act=True)
-            if resp and resp.get("type") == "hora":
+            can_act = cands[seat].can_act if seat in cands else False
+            resp = self.mortal_agents[seat].react(dahai_line, can_act=can_act)
+            if resp and resp.get("type") != "none":
+                ai_responses[seat] = resp
+
+        # Priority 1: Ron (Hora)
+        for seat, resp in ai_responses.items():
+            if resp.get("type") == "hora":
                 return self.handle_hora(seat, target_actor=discarder, is_tsumo=False)
 
-        # 2. Check for Pon/Kan/Chi
-        for seat in sorted(call_candidates.keys()):
-            if seat == 0:
-                continue
-            resp = self.mortal_agents[seat].react(dahai_event, can_act=True)
-            if not resp or resp.get("type") == "none":
-                continue
-
+        # Priority 2: Pon / Kan
+        for seat, resp in ai_responses.items():
             resp_type = resp.get("type")
             consumed = resp.get("consumed", [])
-
             if resp_type == "pon":
                 return self.execute_pon(seat, discarder, tile, consumed)
-            elif resp_type == "chi":
-                return self.execute_chi(seat, discarder, tile, consumed)
             elif resp_type == "daiminkan":
                 return self.execute_kan(seat, discarder, tile, consumed)
 
-        # All passed, advance to next player
-        return self.draw_tile((discarder + 1) % 4)
+        # Priority 3: Chi (shimocha only)
+        for seat, resp in ai_responses.items():
+            if resp.get("type") == "chi" and seat == (discarder + 1) % 4:
+                consumed = resp.get("consumed", [])
+                return self.execute_chi(seat, discarder, tile, consumed)
+
+        # No calls made, advance to next player
+        next_actor = (discarder + 1) % 4
+        return self.draw_tile(next_actor)
 
     def execute_pon(self, actor: int, target_actor: int, tile: str, consumed: List[str]) -> Dict[str, Any]:
         """Execute a Pon call."""
@@ -409,7 +406,7 @@ class GameSession:
         self.melds[actor].append(meld)
 
         pon_event = {"type": "pon", "actor": actor, "target": target_actor, "pai": tile, "consumed": consumed}
-        self.dispatch_public_event(pon_event)
+        self.dispatch_public_event(pon_event, skip_agent=actor)
         self.current_turn = actor
 
         # Discard turn after calling
@@ -419,7 +416,7 @@ class GameSession:
                 "actor": 0,
                 "actions": ["discard"],
                 "shanten": self.player_states[0].shanten,
-                "waits": self.player_states[0].waits,
+                "waits": parse_waits_mask(self.player_states[0].waits),
             }
             return {
                 "event": "user_action_required",
@@ -440,7 +437,7 @@ class GameSession:
         self.melds[actor].append(meld)
 
         chi_event = {"type": "chi", "actor": actor, "target": target_actor, "pai": tile, "consumed": consumed}
-        self.dispatch_public_event(chi_event)
+        self.dispatch_public_event(chi_event, skip_agent=actor)
         self.current_turn = actor
 
         if actor == 0:
@@ -449,7 +446,7 @@ class GameSession:
                 "actor": 0,
                 "actions": ["discard"],
                 "shanten": self.player_states[0].shanten,
-                "waits": self.player_states[0].waits,
+                "waits": parse_waits_mask(self.player_states[0].waits),
             }
             return {
                 "event": "user_action_required",
@@ -517,15 +514,12 @@ class GameSession:
             return self.execute_chi(0, target, tile, consumed)
 
         elif action == "pass":
-            # Pass on call; continue to resolve AI calls or advance turn
+            # Pass on call; continue to resolve AI reactions or advance turn
             target = self.last_discard["actor"]
             tile = self.last_discard["tile"]
-            ai_cands = self.check_reactions(target, tile)
-            if 0 in ai_cands:
-                del ai_cands[0]
-            if ai_cands:
-                return self.resolve_ai_calls(ai_cands, target, tile)
-            return self.draw_tile((target + 1) % 4)
+            # Remaining AI cands
+            cands = {s: self.player_states[s] for s in range(1, 4) if s != target}
+            return self.resolve_ai_reactions(target, tile, cands)
 
         return {"event": "error", "message": f"Unknown action: {action}"}
 
@@ -669,7 +663,7 @@ class GameSession:
             "current_turn": self.current_turn,
             "my_hand": sort_tiles(self.hands[0]),
             "my_shanten": self.player_states[0].shanten,
-            "my_waits": self.player_states[0].waits,
+            "my_waits": parse_waits_mask(self.player_states[0].waits),
             "my_furiten": self.player_states[0].at_furiten,
             "discards": self.discards,
             "melds": self.melds,

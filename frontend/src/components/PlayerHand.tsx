@@ -29,6 +29,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   const hasDrawn = hand.length % 3 === 2
   const mainHand = hasDrawn ? hand.slice(0, hand.length - 1) : hand
   const drawnTile = hasDrawn ? hand[hand.length - 1] : null
+  const validWaits = Array.isArray(waits) ? waits.filter(t => typeof t === 'string' && t.length > 0) : []
 
   return (
     <div className="flex flex-col items-center gap-1.5 select-none">
@@ -38,11 +39,11 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           {formatShanten(shanten)}
         </span>
 
-        {waits && waits.length > 0 && (
+        {validWaits && validWaits.length > 0 && (
           <div className="flex items-center gap-1.5 text-slate-300">
             <span className="text-[11px] text-slate-400">대기패:</span>
             <div className="flex items-center gap-1">
-              {waits.map((waitTile, idx) => (
+              {validWaits.map((waitTile, idx) => (
                 <MahjongTile key={idx} tile={waitTile} size="sm" />
               ))}
             </div>

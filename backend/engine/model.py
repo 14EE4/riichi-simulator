@@ -309,39 +309,6 @@ class MortalEngine:
         self.top_p = top_p
 
     def react_batch(self, obs, masks, invisible_obs):
-        # ========== Online Server =========== #
-        global ot_settings
-        if ot_settings['online']:
-            try:
-                list_obs = [o.tolist() for o in obs]
-                list_masks = [m.tolist() for m in masks]
-                post_data = {
-                    'obs': list_obs,
-                    'masks': list_masks,
-                }
-                data = json.dumps(post_data, separators=(',', ':'))
-                compressed_data = gzip.compress(data.encode('utf-8'))
-                headers = {
-                    'Authorization': ot_settings['api_key'],
-                    'Content-Encoding': 'gzip',
-                }
-                r = requests.post(
-                    f'{ot_settings["server"]}/react_batch',
-                    headers=headers,
-                    data=compressed_data,
-                    timeout=OT_REQUEST_TIMEOUT
-                )
-                assert r.status_code == 200
-                r_json = r.json()
-                result = r_json['actions'], r_json['q_out'], r_json['masks'], r_json['is_greedy']
-                # Only mark online once the response fully parses, so a 200
-                # with a malformed body doesn't flicker connected→disconnected.
-                _update_online_status(True)
-                return result
-            except:
-                _update_online_status(False)
-                pass
-        # ==================================== #
         try:
             with (
                 torch.autocast(self.device.type, enabled=self.enable_amp),
